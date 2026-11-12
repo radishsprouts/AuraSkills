@@ -3,7 +3,12 @@ package dev.aurelium.auraskills.bukkit.util;
 import org.bukkit.Bukkit;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 public class VersionUtils {
+
+    private static final Pattern VERSION_PATTERN = Pattern.compile("(\\d+(?:\\.\\d+)+)");
 
     public static final int MAJOR_VERSION = getMajorVersion(getVersionString(Bukkit.getBukkitVersion()));
     public static final int MINOR_VERSION = getMinorVersion(getVersionString(Bukkit.getBukkitVersion()));
@@ -40,25 +45,44 @@ public class VersionUtils {
         }
     }
 
+    private static int parseLeadingInt(String str, int fallback) {
+        if (str == null || str.isEmpty()) {
+            return fallback;
+        }
+        int i = 0;
+        while (i < str.length() && Character.isDigit(str.charAt(i))) {
+            i++;
+        }
+        if (i == 0) {
+            return fallback;
+        }
+        try {
+            return Integer.parseInt(str.substring(0, i));
+        } catch (Exception ignored) {
+            return fallback;
+        }
+    }
+
     public static int getMinorVersion(String version) {
         try {
             if (version == null) {
                 return FALLBACK_MINOR_VERSION;
             }
-            if (version.startsWith("1.")) {
-                int lastDot = version.lastIndexOf('.');
-                if (version.indexOf('.') != lastDot) {
-                    return Integer.parseInt(version.substring(lastDot + 1));
+            String[] parts = version.split("\\.");
+            if (parts.length == 0) {
+                return FALLBACK_MINOR_VERSION;
+            }
+            if (parts[0].equals("1")) {
+                if (parts.length > 2) {
+                    return parseLeadingInt(parts[2], FALLBACK_MINOR_VERSION);
                 } else {
                     return 0;
                 }
             } else {
-                int firstDot = version.indexOf(".");
-                int lastDot = version.lastIndexOf(".");
-                if (firstDot != lastDot) {
-                    return Integer.parseInt(version.substring(firstDot + 1, lastDot));
+                if (parts.length > 1) {
+                    return parseLeadingInt(parts[1], FALLBACK_MINOR_VERSION);
                 } else {
-                    return Integer.parseInt(version.substring(firstDot + 1));
+                    return 0;
                 }
             }
         } catch (Exception ignored) {
@@ -71,20 +95,16 @@ public class VersionUtils {
             if (version == null) {
                 return FALLBACK_MAJOR_VERSION;
             }
-            int firstDot = version.indexOf(".");
-            if (version.startsWith("1.")) {
-                int lastDot = version.lastIndexOf(".");
-                if (firstDot != lastDot) { // x.x.x format
-                    String sub = version.substring(firstDot + 1, lastDot);
-                    if (sub.contains(".")) { // In case there are extra dots at the end
-                        sub = sub.substring(0, sub.indexOf("."));
-                    }
-                    return Integer.parseInt(sub);
-                } else { // x.x format
-                    return Integer.parseInt(version.substring(firstDot + 1));
+            String[] parts = version.split("\\.");
+            if (parts.length == 0) {
+                return FALLBACK_MAJOR_VERSION;
+            }
+            if (parts[0].equals("1")) {
+                if (parts.length > 1) {
+                    return parseLeadingInt(parts[1], FALLBACK_MAJOR_VERSION);
                 }
-            } else { // New version system since 26.1
-                return Integer.parseInt(version.substring(0, firstDot));
+            } else {
+                return parseLeadingInt(parts[0], FALLBACK_MAJOR_VERSION);
             }
         } catch (Exception ignored) {
         }
@@ -92,14 +112,21 @@ public class VersionUtils {
     }
 
     public static int getPatchVersion(String version) {
-        if (version.startsWith("1.")) {
-            return 0;
-        } else {
-            int firstDot = version.indexOf(".");
-            int lastDot = version.lastIndexOf(".");
-            if (firstDot != lastDot) {
-                return Integer.parseInt(version.substring(lastDot + 1));
+        try {
+            if (version == null) {
+                return 0;
             }
+            String[] parts = version.split("\\.");
+            if (parts.length == 0 || parts[0].equals("1")) {
+                return 0;
+            } else {
+                if (parts.length > 2) {
+                    return parseLeadingInt(parts[2], 0);
+                } else {
+                    return 0;
+                }
+            }
+        } catch (Exception ignored) {
         }
         return 0;
     }
@@ -109,22 +136,27 @@ public class VersionUtils {
             return null;
         }
 
-        // getVersion()
+        // Bukkit.getVersion() often contains "(MC: 1.20.4)" or "(MC: 26.1.2)"
         int index = version.lastIndexOf("MC:");
         if (index != -1) {
-            version = version.substring(index + 4, version.length() - 1);
-        } else if (version.contains(".build.")) {
+            version = version.substring(index + 3);
+        }
+
+        Matcher matcher = VERSION_PATTERN.matcher(version);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+
+        // Fallback: strip SNAPSHOT / build / extra words
+        if (version.contains(".build.")) {
             int buildIndex = version.indexOf(".build.");
             version = version.substring(0, buildIndex);
-        } else if (version.endsWith("SNAPSHOT")) {
-            // getBukkitVersion()
+        } else if (version.endsWith("SNAPSHOT") && version.contains("-")) {
             index = version.indexOf('-');
             version = version.substring(0, index);
         }
 
-        version = version.split(" ")[0]; // Remove extra words
-
-        return version;
+        return version.split(" ")[0];
     }
 
 }

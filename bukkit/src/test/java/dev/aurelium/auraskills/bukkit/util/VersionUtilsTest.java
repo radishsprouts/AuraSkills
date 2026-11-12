@@ -24,6 +24,8 @@ public class VersionUtilsTest {
         assertEquals(21, VersionUtils.getMajorVersion("1.21.10"));
         assertEquals(26, VersionUtils.getMajorVersion("26.1"));
         assertEquals(27, VersionUtils.getMajorVersion("27.3.1"));
+        assertEquals(26, VersionUtils.getMajorVersion("26.1.2.local"));
+        assertEquals(26, VersionUtils.getMajorVersion("26.1.2.local-SNAPSHOT"));
     }
 
     @Test
@@ -33,6 +35,8 @@ public class VersionUtilsTest {
         assertEquals(10, VersionUtils.getMinorVersion("1.21.10"));
         assertEquals(1, VersionUtils.getMinorVersion("26.1"));
         assertEquals(3, VersionUtils.getMinorVersion("27.3.1"));
+        assertEquals(1, VersionUtils.getMinorVersion("26.1.2.local"));
+        assertEquals(1, VersionUtils.getMinorVersion("26.1.2.local-SNAPSHOT"));
     }
 
     @Test
@@ -43,5 +47,16 @@ public class VersionUtilsTest {
         assertEquals(0, VersionUtils.getPatchVersion("26.1"));
         assertEquals(1, VersionUtils.getPatchVersion("27.3.1"));
         assertEquals(12, VersionUtils.getPatchVersion("27.3.12"));
+        assertEquals(2, VersionUtils.getPatchVersion("26.1.2.local"));
+        assertEquals(2, VersionUtils.getPatchVersion("26.1.2.local-SNAPSHOT"));
+    }
+
+    @Test
+    void testGetVersionString() {
+        assertEquals("1.20.4", VersionUtils.getVersionString("1.20.4-R0.1-SNAPSHOT"));
+        assertEquals("26.1.2", VersionUtils.getVersionString("26.1.2.local-SNAPSHOT"));
+        assertEquals("26.1.2", VersionUtils.getVersionString("26.1.2-R0.1-SNAPSHOT"));
+        assertEquals("26.1.2", VersionUtils.getVersionString("26.1.2.build.8-stable"));
+        assertEquals("26.1.2", VersionUtils.getVersionString("git-Folia-8 (MC: 26.1.2)"));
     }
 }
