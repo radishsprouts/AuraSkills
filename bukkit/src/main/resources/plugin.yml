@@ -17,6 +17,7 @@ softdepend:
 - MythicMobs
 - FancyHolograms
 - packetevents
+- LevelledMobs
 api-version: '1.13'
 folia-supported: true
 prefix: AuraSkills

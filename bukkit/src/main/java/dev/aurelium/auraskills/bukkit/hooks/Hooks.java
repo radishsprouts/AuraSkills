@@ -18,7 +18,8 @@ public enum Hooks implements HookType {
     WORLD_GUARD(WorldGuardHook.class, "WorldGuard"),
     MYTHIC_MOBS(MythicMobsHook.class, "MythicMobs"),
     NEXO(NexoHook.class, "Nexo", false),
-    PACKET_EVENTS(PacketEventsHook.class, "packetevents");
+    PACKET_EVENTS(PacketEventsHook.class, "packetevents"),
+    LEVELLED_MOBS(LevelledMobsHook.class, "LevelledMobs");
 
     private final Class<? extends Hook> hookClass;
     private final String pluginName;

@@ -62,6 +62,12 @@ hooks:
     enabled: true
   packetevents:
     enabled: true
+  LevelledMobs:
+    enabled: true
+    xp_multiplier: 0.1
+    expression: '1 + (level - 1) * xp_multiplier'
+    max_multiplier: 0.0
+    respect_chunk_kill_max: true
 action_bar:
   enabled: true
   idle: true

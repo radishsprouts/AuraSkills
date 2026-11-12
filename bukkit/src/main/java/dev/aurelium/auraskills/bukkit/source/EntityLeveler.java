@@ -8,6 +8,7 @@ import dev.aurelium.auraskills.api.source.type.EntityXpSource;
 import dev.aurelium.auraskills.api.source.type.EntityXpSource.EntityDamagers;
 import dev.aurelium.auraskills.api.source.type.EntityXpSource.EntityTriggers;
 import dev.aurelium.auraskills.bukkit.AuraSkills;
+import dev.aurelium.auraskills.bukkit.hooks.LevelledMobsHook;
 import dev.aurelium.auraskills.bukkit.hooks.mythicmobs.MythicMobsHook;
 import dev.aurelium.auraskills.bukkit.skills.fighting.FightingAbilities;
 import dev.aurelium.auraskills.bukkit.util.AttributeCompat;
@@ -86,7 +87,7 @@ public class EntityLeveler extends SourceLeveler {
 
         if (failsChecks(player, entity.getLocation(), skill)) return;
 
-        plugin.getLevelManager().addEntityXp(user, skill, source, getSpawnerMultiplier(entity, skill) * source.getXp(),
+        plugin.getLevelManager().addEntityXp(user, skill, source, getSpawnerMultiplier(entity, skill) * getLevelledMobsMultiplier(entity) * source.getXp(),
                 entity, damagerEntity, event);
     }
 
@@ -118,7 +119,7 @@ public class EntityLeveler extends SourceLeveler {
         if (failsChecks(event, player, entity.getLocation(), skill)) return;
 
         double damageMultiplier = getDamageMultiplier(entity, source, event);
-        plugin.getLevelManager().addEntityXp(user, skill, source, damageMultiplier * getSpawnerMultiplier(entity, skill) * source.getXp(),
+        plugin.getLevelManager().addEntityXp(user, skill, source, damageMultiplier * getSpawnerMultiplier(entity, skill) * getLevelledMobsMultiplier(entity) * source.getXp(),
                 entity, event.getDamager(), event);
     }
 
@@ -146,7 +147,7 @@ public class EntityLeveler extends SourceLeveler {
         if (failsChecks(player, entity.getLocation(), skill)) return;
 
         double damageMultiplier = getDamageMultiplier(entity, source, event);
-        plugin.getLevelManager().addEntityXp(user, skill, source, damageMultiplier * getSpawnerMultiplier(entity, skill) * source.getXp(),
+        plugin.getLevelManager().addEntityXp(user, skill, source, damageMultiplier * getSpawnerMultiplier(entity, skill) * getLevelledMobsMultiplier(entity) * source.getXp(),
                 entity, player, null);
     }
 
@@ -324,6 +325,13 @@ public class EntityLeveler extends SourceLeveler {
             }
         }
         return damageDealt;
+    }
+
+    private double getLevelledMobsMultiplier(LivingEntity entity) {
+        if (plugin.getHookManager().isRegistered(LevelledMobsHook.class)) {
+            return plugin.getHookManager().getHook(LevelledMobsHook.class).getXpMultiplier(entity);
+        }
+        return 1.0;
     }
 
 }

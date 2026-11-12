@@ -74,7 +74,7 @@ public class DamageListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.LOW)
     public void onDamageLow(EntityDamageByEntityEvent event) {
         if (event.getEntity() instanceof Player player && plugin.configBoolean(Option.DAMAGE_CORRECT_LAST_DAMAGE)) {
             User user = plugin.getUser(player);

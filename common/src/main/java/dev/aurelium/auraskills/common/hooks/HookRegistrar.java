@@ -24,8 +24,16 @@ public abstract class HookRegistrar {
 
     public void registerHooks(ConfigurationNode config, HookType[] hooks) {
         for (HookType hookType : hooks) {
-            // Don't re-register hooks
-            if (manager.isRegistered(hookType.getHookClass())) continue;
+            // Reload if already registered
+            if (manager.isRegistered(hookType.getHookClass())) {
+                try {
+                    Hook hook = manager.getHook(hookType.getHookClass());
+                    ConfigurationNode hookConfig = config.node(hookType.getPluginName());
+                    hook.reload(hookConfig);
+                } catch (Exception ignored) {
+                }
+                continue;
+            }
             // Make sure the plugin that hooks into is enabled
             if (hookType.requiresEnabledFirst()) {
                 if (!isPluginEnabled(hookType.getPluginName())) {

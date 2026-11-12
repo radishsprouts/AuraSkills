@@ -6,7 +6,7 @@ import org.spongepowered.configurate.ConfigurationNode;
 public abstract class Hook {
 
     protected final AuraSkillsPlugin plugin;
-    private final ConfigurationNode config;
+    private ConfigurationNode config;
 
     public Hook(AuraSkillsPlugin plugin, ConfigurationNode config) {
         this.plugin = plugin;
@@ -15,6 +15,10 @@ public abstract class Hook {
 
     public ConfigurationNode getConfig() {
         return config;
+    }
+
+    public void reload(ConfigurationNode config) {
+        this.config = config;
     }
 
     public abstract Class<? extends Hook> getTypeClass();
