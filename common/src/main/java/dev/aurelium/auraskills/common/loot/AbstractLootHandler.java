@@ -20,11 +20,13 @@ public abstract class AbstractLootHandler {
     }
 
     public double getAbilityModifiedChance(double chance, Ability ability, User user) {
+        int level = user.getEffectiveAbilityLevel(ability);
+        if (level <= 0) return chance;
         // Check option to scale base chance
         if (ability.optionBoolean("scale_base_chance", false)) {
-            chance *= 1 + (ability.getValue(user.getAbilityLevel(ability)) / 100);
+            chance *= 1 + (ability.getValue(level) / 100);
         } else { // Otherwise add to base chance
-            chance += (ability.getValue(user.getAbilityLevel(ability)) / 100);
+            chance += (ability.getValue(level) / 100);
         }
         return chance;
     }

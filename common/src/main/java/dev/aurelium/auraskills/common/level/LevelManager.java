@@ -1,5 +1,6 @@
 package dev.aurelium.auraskills.common.level;
 
+import dev.aurelium.auraskills.api.ability.Abilities;
 import dev.aurelium.auraskills.api.ability.Ability;
 import dev.aurelium.auraskills.api.skill.Skill;
 import dev.aurelium.auraskills.api.source.XpSource;
@@ -37,10 +38,16 @@ public abstract class LevelManager {
     public double getAbilityMultiplier(User user, Skill skill) {
         Ability ability = skill.getXpMultiplierAbility();
         double multiplier = 1.0;
-        if (ability != null && user.getAbilityLevel(ability) > 0) {
+        if (ability != null && user.isAbilityEquipped(ability) && user.getAbilityLevel(ability) > 0) {
             double abilityValue = ability.getValue(user.getAbilityLevel(ability));
-            double addedMultiplier = abilityValue / 100;
+            double addedMultiplier = abilityValue / 100.0;
             multiplier += addedMultiplier;
+        }
+        if (Abilities.MYSTIC_INFUSION.isEnabled() && user.isAbilityEquipped(Abilities.MYSTIC_INFUSION)) {
+            double bonusPercent = user.getAbilityData(Abilities.MYSTIC_INFUSION).getDouble("xp_bonus_percent");
+            if (bonusPercent > 0) {
+                multiplier += bonusPercent / 100.0;
+            }
         }
         return multiplier;
     }

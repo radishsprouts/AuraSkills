@@ -1,19 +1,42 @@
 title: '{{abilities_title}}'
-size: 4
+size: 5
 fill:
   enabled: true
   material: black_stained_glass_pane
 items:
   back:
     material: arrow
-    pos: 3,0
+    pos: 4,0
     display_name: '<green>{{back}}'
     lore:
       - '<gray>{{back_click}}'
+  equipped_slot_1:
+    pos: 0,3
+    material: gray_dye
+    display_name: '<yellow>装備スロット #1'
+  equipped_slot_2:
+    pos: 0,4
+    material: gray_dye
+    display_name: '<yellow>装備スロット #2'
+  equipped_slot_3:
+    pos: 0,5
+    material: gray_dye
+    display_name: '<yellow>装備スロット #3'
 templates:
   locked_ability:
     material: gray_dye
     display_name: '<aqua>{name}'
+    options:
+      slots:
+        - 1,2
+        - 1,3
+        - 1,4
+        - 1,5
+        - 1,6
+        - 2,2
+        - 2,3
+        - 2,4
+        - 2,5
     lore:
       - '<white>{{description}}:'
       - text: '{desc}'
@@ -27,28 +50,20 @@ templates:
           2: '<dark_aqua>'
       - ' '
       - '<red>{{locked}}'
-  locked_mana_ability:
-    pos: 2,4
-    material: gray_dye
-    display_name: '<light_purple>{name}'
-    lore:
-      - '<white>{{description}}:'
-      - text: '{desc}'
-        wrap: true
-        wrap_indent: '  '
-        styles:
-          0: '<gray>'
-          1: '<yellow>'
-      - ' '
-      - text: '{{unlocked_at}}'
-        styles:
-          1: '<gray>'
-          2: '<dark_aqua>'
-      - ' '
-      - '<red>{{locked}}'
   unlocked_ability:
     material: light_blue_dye
     display_name: '<aqua>{name}'
+    options:
+      slots:
+        - 1,2
+        - 1,3
+        - 1,4
+        - 1,5
+        - 1,6
+        - 2,2
+        - 2,3
+        - 2,4
+        - 2,5
     lore:
       - component: your_level
       - component: your_level_maxed
@@ -56,20 +71,12 @@ templates:
       - component: unlocked_desc
       - component: unlocked_desc_maxed
       - ' '
-      - '<green>{{unlocked}}'
-  unlocked_mana_ability:
-    pos: 2,4
-    material: magenta_dye
-    display_name: '&d{name}'
-    lore:
-      - component: your_level
-      - component: your_level_maxed
-      - ' '
-      - component: unlocked_desc
-      - component: unlocked_desc_maxed
-      - ' '
-      - '<green>{{unlocked}}'
+      - component: equip_status
 components:
+  equip_status:
+    context: Ability
+    lore:
+      - '{status}'
   your_level:
     context: AbstractAbility
     lore:

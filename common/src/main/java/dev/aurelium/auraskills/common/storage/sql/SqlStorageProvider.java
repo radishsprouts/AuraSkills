@@ -45,6 +45,7 @@ public class SqlStorageProvider extends StorageProvider {
     public static final int UNCLAIMED_ITEMS_ID = 4;
     public static final int ACTION_BAR_ID = 5;
     public static final int JOBS_ID = 6;
+    public static final int EQUIPPED_ABILITIES_ID = 7;
     public static final String MODIFIER_TYPE_STAT = "stat";
     public static final String MODIFIER_TYPE_TRAIT = "trait";
     public static final String LOG_TYPE_ANTI_AFK = "anti_afk";
@@ -346,6 +347,7 @@ public class SqlStorageProvider extends StorageProvider {
         rows.addAll(getUnclaimedItemsRow(user.getUnclaimedItems()));
         rows.addAll(getActionBarRow(user));
         rows.addAll(getJobsRow(user, user.getJobs()));
+        rows.addAll(getEquippedAbilitiesRow(user));
         // Insert all key values in a batch
         saveKeyValueRows(connection, userId, rows);
     }
@@ -592,6 +594,18 @@ public class SqlStorageProvider extends StorageProvider {
         var timeRow = new KeyValueRow(JOBS_ID, null, JOBS_LAST_SELECT_TIME, String.valueOf(user.getLastJobSelectTime()));
         rows.add(timeRow);
 
+        return rows;
+    }
+
+    private List<KeyValueRow> getEquippedAbilitiesRow(User user) {
+        List<KeyValueRow> rows = new ArrayList<>();
+        if (user.getEquippedAbilities().isEmpty()) {
+            return rows;
+        }
+
+        String abilityCommaList = String.join(",", user.getEquippedAbilities().stream().map(a -> a.getId().toString()).toList());
+        var equippedRow = new KeyValueRow(EQUIPPED_ABILITIES_ID, null, "equipped", abilityCommaList);
+        rows.add(equippedRow);
         return rows;
     }
 

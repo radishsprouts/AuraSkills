@@ -36,6 +36,8 @@ public class SkillsMenu {
         menu.item("close", globalItems::close); // Close item
         menu.fillItem(globalItems::fill);
 
+        new dev.aurelium.auraskills.bukkit.menus.shared.EquippedAbilitiesItem(plugin).register(menu, "skills");
+
         var skillItem = new SkillItem(plugin);
         skillItem.buildComponents(menu);
 

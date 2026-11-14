@@ -195,6 +195,31 @@ public class OfflineSkillsUser implements SkillsUser {
     }
 
     @Override
+    public boolean isAbilityEquipped(Ability ability) {
+        return false;
+    }
+
+    @Override
+    public int getEffectiveAbilityLevel(Ability ability) {
+        return 0;
+    }
+
+    @Override
+    public List<Ability> getEquippedAbilities() {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public boolean equipAbility(Ability ability) {
+        return false;
+    }
+
+    @Override
+    public boolean unequipAbility(Ability ability) {
+        return false;
+    }
+
+    @Override
     public int getManaAbilityLevel(ManaAbility manaAbility) {
         return 0;
     }

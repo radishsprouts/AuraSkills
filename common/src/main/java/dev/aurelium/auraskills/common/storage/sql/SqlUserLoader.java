@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import dev.aurelium.auraskills.api.ability.Ability;
 import dev.aurelium.auraskills.api.ability.AbstractAbility;
 import dev.aurelium.auraskills.api.mana.ManaAbility;
 import dev.aurelium.auraskills.api.registry.NamespacedId;
@@ -139,6 +140,7 @@ public class SqlUserLoader {
                     case UNCLAIMED_ITEMS_ID -> applyUnclaimedItem(user, keyName, value);
                     case ACTION_BAR_ID -> applyActionBar(user, keyName, value);
                     case JOBS_ID -> applyJobs(user, keyName, value);
+                    case EQUIPPED_ABILITIES_ID -> applyEquippedAbilities(user, keyName, value);
                 }
             }
         }
@@ -254,6 +256,20 @@ public class SqlUserLoader {
             }
             user.setLastJobSelectTime(time);
         }
+    }
+
+    private void applyEquippedAbilities(User user, String keyName, String valueStr) {
+        if (!keyName.equals("equipped")) return;
+        String[] splitValue = valueStr.split(",");
+        java.util.List<Ability> abilities = new java.util.ArrayList<>();
+        for (String abilityId : splitValue) {
+            if (abilityId.isEmpty()) continue;
+            Ability ability = plugin.getAbilityRegistry().getOrNull(NamespacedId.fromString(abilityId));
+            if (ability != null) {
+                abilities.add(ability);
+            }
+        }
+        user.setEquippedAbilitiesFromStorage(abilities);
     }
 
     @Nullable

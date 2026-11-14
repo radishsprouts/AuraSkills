@@ -221,6 +221,31 @@ public class ApiSkillsUser implements SkillsUser {
     }
 
     @Override
+    public boolean isAbilityEquipped(Ability ability) {
+        return user.isAbilityEquipped(ability);
+    }
+
+    @Override
+    public int getEffectiveAbilityLevel(Ability ability) {
+        return user.getEffectiveAbilityLevel(ability);
+    }
+
+    @Override
+    public java.util.List<Ability> getEquippedAbilities() {
+        return user.getEquippedAbilities();
+    }
+
+    @Override
+    public boolean equipAbility(Ability ability) {
+        return user.equipAbility(ability);
+    }
+
+    @Override
+    public boolean unequipAbility(Ability ability) {
+        return user.unequipAbility(ability);
+    }
+
+    @Override
     public int getManaAbilityLevel(ManaAbility manaAbility) {
         return user.getManaAbilityLevel(manaAbility);
     }

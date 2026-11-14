@@ -220,7 +220,7 @@ leveler:
     pitch: 0.5
   double_check_delay: 20
 mana:
-  enabled: true
+  enabled: false
   cooldown_timer_period: 2
 modifier:
   armor:
@@ -288,7 +288,7 @@ source:
       stationary_kill_radius: 8.0
 commands:
   mana:
-    enabled: true
+    enabled: false
     aliases:
     - mana
   skills:

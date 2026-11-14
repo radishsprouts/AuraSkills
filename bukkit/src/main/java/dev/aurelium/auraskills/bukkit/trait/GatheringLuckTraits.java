@@ -87,7 +87,7 @@ public class GatheringLuckTraits extends TraitImpl {
     }
 
     @Override
-    protected void reload(Player player, Trait trait) {
+    public void reload(Player player, Trait trait) {
         User user = plugin.getUser(player);
 
         Ability ability = getAbility(trait);
@@ -102,7 +102,8 @@ public class GatheringLuckTraits extends TraitImpl {
         }
 
         // Get the luck trait value from the ability value
-        double value = ability.getValue(user.getAbilityLevel(ability));
+        int effLevel = user.getEffectiveAbilityLevel(ability);
+        double value = effLevel > 0 ? ability.getValue(effLevel) : 0;
 
         if (value != 0) {
             var modifier = new TraitModifier(modifierName, trait, value, Operation.ADD);

@@ -263,6 +263,45 @@ public interface SkillsUser {
     int getAbilityLevel(Ability ability);
 
     /**
+     * Gets whether an ability is currently equipped in one of the active slots.
+     *
+     * @param ability the ability to check
+     * @return true if equipped, false otherwise
+     */
+    boolean isAbilityEquipped(Ability ability);
+
+    /**
+     * Gets the effective level of an ability (returns 0 if not equipped).
+     *
+     * @param ability the ability to check
+     * @return the effective level
+     */
+    int getEffectiveAbilityLevel(Ability ability);
+
+    /**
+     * Gets the list of currently equipped abilities.
+     *
+     * @return the unmodifiable list of equipped abilities
+     */
+    java.util.List<Ability> getEquippedAbilities();
+
+    /**
+     * Equips an ability in an available slot.
+     *
+     * @param ability the ability to equip
+     * @return true if successfully equipped
+     */
+    boolean equipAbility(Ability ability);
+
+    /**
+     * Unequips an ability from active slots.
+     *
+     * @param ability the ability to unequip
+     * @return true if successfully unequipped
+     */
+    boolean unequipAbility(Ability ability);
+
+    /**
      * Gets the level of a mana ability.
      *
      * @param manaAbility the mana ability to get the level of

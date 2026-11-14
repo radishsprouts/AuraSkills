@@ -291,6 +291,182 @@ abilities:
     name: "スキルメンダー"
     desc: 'スキルの経験値を獲得する際に{value}% の確率で、持ち物の「修繕」エンチャントを持ったアイテムを修復できます。(1スキルXPにつき耐久力が1回復)'
     info: '{value}% 修繕確率'
+  auto_replant:
+    name: "自動再植え付け"
+    desc: "クワで成熟した作物を収穫すると自動で再植え付けを行い、{value}%の確率で周囲3x3の作物を一括収穫・再植え付けします。"
+    info: "{value}% 3x3一括収穫"
+  green_thumb:
+    name: "緑の親指"
+    desc: "作物を植えた時に{value}%の確率で初期成長段階が進み、骨粉使用時に周囲の作物にも成長が波及します。"
+    info: "{value}% 成長促進"
+  gourmet_feast:
+    name: "グルメフェースト"
+    desc: "農作物を原料とする食品を食べた時の隠し満腹度回復量が+{value}%され、10秒間移動速度または攻撃力上昇が付与されます。"
+    info: "+{value}% 隠し満腹度"
+  golden_harvest:
+    name: "黄金の収穫"
+    desc: "成熟した作物の収穫時に{value}%の確率で金塊・金の人参・金のリンゴをドロップし、追加経験値を獲得します。"
+    info: "{value}% 黄金ドロップ確率"
+  timber:
+    name: "ティンバー"
+    desc: "斧で原木を伐採すると、一撃で最大{value}個の繋がった原木を一括破壊します。"
+    info: "最大{value}ブロック伐採"
+  canopy_harvester:
+    name: "樹冠ハーベスター"
+    desc: "原木伐採時に周囲の葉ブロックを急速崩壊させ、{value}%の確率で苗木・リンゴ・小枝が追加ドロップします。"
+    info: "{value}% 樹冠ボーナス確率"
+  berserker_axe:
+    name: "狂戦士の斧"
+    desc: "斧で敵を攻撃すると、ヒットごとに攻撃速度と移動速度が{value}%上昇します（最大5スタック）。"
+    info: "+{value}% 速度/ヒット"
+  nature_blessing:
+    name: "自然の恵み"
+    desc: "原木伐採時に満腹度と体力が回復し、{value}%の確率で原木ドロップが2倍になります。"
+    info: "{value}% 2倍ドロップ&回復"
+  vein_miner:
+    name: "連鎖採掘"
+    desc: "ツルハシで鉱石を採掘すると、一撃で最大{value}個の繋がった同種鉱石を一括採掘します。"
+    info: "最大{value}鉱石一括採掘"
+  auto_smelt:
+    name: "オート製錬"
+    desc: "鉄・銅・金の原石採掘時に{value}%の確率でインゴットとして直接精錬ドロップし、追加経験値を獲得します。"
+    info: "{value}% 製錬確率"
+  tunnel_bore:
+    name: "トンネル掘進"
+    desc: "スニーク中に石系ブロックを採掘すると、{value}%の確率で周囲3x3の範囲を一括採掘します。"
+    info: "{value}% 3x3掘進確率"
+  gem_seeker:
+    name: "原石鑑定士"
+    desc: "石や深層岩を採掘した際に{value}%の確率で隠された宝石（ラピス・エメラルド・アメジスト・ダイヤモンド）を発見します。"
+    info: "{value}% 宝石発見確率"
+  angler_surge:
+    name: "釣り師の波涛"
+    desc: "魚の食いつき待ち時間を短縮し、引き上げ時に{value}%の確率で釣果アイテムが2倍になります。"
+    info: "{value}% 2倍釣果確率"
+  poseidon_favor:
+    name: "ポセイドンの加護"
+    desc: "水中に入っている時、または雨天時に与える攻撃ダメージが+{value}%増加します。"
+    info: "+{value}% 水中攻撃力"
+  barbed_hook:
+    name: "返し針"
+    desc: "釣り針でMobを引っ掛けて引き寄せた際、{value}の追加ダメージと弱体化効果を与えます。"
+    info: "{value} 引寄せダメージ"
+  salvager:
+    name: "サルベージャー"
+    desc: "釣り上げた耐久値付きの武具・釣竿・弓の耐久値を最大耐久値の{value}%分自動修繕します。"
+    info: "+{value}% 耐久値修繕"
+  excavation_sweep:
+    name: "一掃掘削"
+    desc: "シャベルで土・砂・砂利・泥を掘削すると、一撃で最大{value}個の繋がった軟質ブロックを一括破壊します。"
+    info: "最大{value}ブロック一括破壊"
+  sifter:
+    name: "選鉱ふるい"
+    desc: "砂利・砂・泥を掘った時に{value}%の確率で火打石・粘土玉・鉄塊・銅塊などをふるい分け発見します。"
+    info: "{value}% ふるい分け確率"
+  archeologist:
+    name: "考古学者"
+    desc: "地面を掘削した際に{value}%の確率で古代の遺物（骨・名札・エメラルド・陶片）を発見します。"
+    info: "{value}% 遺物発見確率"
+  earth_armor:
+    name: "大地の加護"
+    desc: "土・草・泥・石などの自然ブロックの上に立っている間、受けるダメージを{value}%軽減します。"
+    info: "{value}% ダメージ軽減"
+  homing_arrow:
+    name: "微誘導矢"
+    desc: "放った矢が正面25度の視界内にいる敵対Mobに向かって緩やかに軌道修正し命中をアシストします。"
+    info: "+{value}% 誘導強度"
+  multishot_barrage:
+    name: "マルチショット弾幕"
+    desc: "弓を撃った際、{value}%の確率で矢を消費せずに追加の拡散矢を1本同時発射します。"
+    info: "{value}% 追加矢確率"
+  sniper_scope:
+    name: "長距離狙撃"
+    desc: "矢がターゲットに着弾するまでの飛行距離10ブロックごとに、弓ダメージが+{value}%増加します。"
+    info: "+{value}% 距離ボーナス"
+  apollo_quiver:
+    name: "アポロンの矢筒"
+    desc: "敵に矢が命中した時、{value}%の確率で矢が手元に還元され、敵の防御力を貫通します。"
+    info: "{value}% 矢回収&装甲貫通"
+  guardian_barrier:
+    name: "ガーディアンバリア"
+    desc: "被ダメージ時に15秒間{value}ポイントの追加吸収ハートを展開し、ノックバックを無効化します。"
+    info: "{value} 吸収バリア"
+  thorns_counter:
+    name: "棘の反撃"
+    desc: "盾で攻撃を防いだ際、攻撃者に{value}%のダメージを反射し、ノックバックさせて体勢を崩します。"
+    info: "{value}% ダメージ反射"
+  last_stand:
+    name: "ラストスタンド"
+    desc: "体力が30%以下に低下した時、受けるダメージが{value}%軽減され、再生効果IIが即座に発動します。"
+    info: "{value}% 瀕死時ダメージ軽減"
+  fortress_stance:
+    name: "要塞の構え"
+    desc: "3秒間移動せずその場に留まると構えが完成し、防御力と攻撃力が+{value}%増加します。"
+    info: "+{value}% 静止時強化"
+  dual_wield:
+    name: "二刀流"
+    desc: "オフハンドに武器を持った状態で右クリックすると、独立したクールダウンで左手の近接攻撃を繰り出します。"
+    info: "+{value}% オフハンド攻撃強化"
+  lifesteal_slash:
+    name: "吸血刃"
+    desc: "モンスターに近接攻撃を当てた際、与えたダメージの{value}%分プレイヤーの体力を即座に吸収回復します。"
+    info: "{value}% ダメージ吸収回復"
+  cleaving_arc:
+    name: "薙ぎ払い撃"
+    desc: "剣の薙ぎ払い攻撃の範囲が拡大し、周囲の敵対Mob全員に{value}%の薙ぎ払いダメージを与えます。"
+    info: "+{value}% 薙ぎ払いダメージ"
+  executioner:
+    name: "処刑執行人"
+    desc: "体力が40%以下の敵に対する攻撃ダメージが+{value}%上昇し、討伐時に移動速度が瞬間上昇します。"
+    info: "+{value}% 処刑ダメージ"
+  wind_stepper:
+    name: "風歩き"
+    desc: "常時プレイヤーの移動速度が+{value}上昇します。"
+    info: "+{value} 移動速度"
+  evasion:
+    name: "直感回避"
+    desc: "敵からの直接攻撃や矢を受けた際、{value}%の確率で身を翻してダメージを完全に回避無効化します。"
+    info: "{value}% 回避確率"
+  acrobat:
+    name: "アクロバット"
+    desc: "ジャンプ中のクリティカル攻撃ダメージが+{value}%増加し、ダッシュ時の空腹度消費が{value}%軽減されます。"
+    info: "+{value}% 跳躍攻撃強化"
+  second_wind:
+    name: "空中ダッシュ"
+    desc: "落下中にスニークを入力すると空中ダッシュを放ち、落下距離をリセットして体勢を立て直します。"
+    info: "8秒クールダウン"
+  venomous_coat:
+    name: "猛毒コーティング"
+    desc: "近接攻撃時に敵へ毒薬を塗り込み、{value}秒間毒と移動速度低下効果を付与します。"
+    info: "{value}秒 毒・鈍化付与"
+  potion_saver:
+    name: "調薬節約"
+    desc: "ポーションを飲んだ際、{value}%の確率でポーションを消費せず瓶の中身を維持します。"
+    info: "{value}% 消費回避確率"
+  alchemical_shield:
+    name: "錬金結界"
+    desc: "自身に発動している有効なポーション効果1種類につき、受けるダメージを{value}%軽減します。"
+    info: "1効果につき{value}%軽減"
+  volatile_brew:
+    name: "揮発性調合"
+    desc: "スプラッシュポーション着弾時に錬金衝撃波を放ち、周囲の敵対Mobへ{value}の追加魔法ダメージを与えます。"
+    info: "{value} 衝撃波ダメージ"
+  arcane_surge:
+    name: "秘術解放"
+    desc: "手に持った武器に付与されているエンチャントの合計レベル1ごとに、攻撃ダメージが+{value}%増加します。"
+    info: "1エンチャントLvごと+{value}%"
+  soul_harvester:
+    name: "ソウルハーベスター"
+    desc: "モンスター討伐時のドロップ経験値が+{value}%増加し、修繕の付いていない装備の耐久値を少し修復します。"
+    info: "+{value}% 経験値&装備修復"
+  mystic_infusion:
+    name: "神秘の注入"
+    desc: "エンチャントされた防具を3箇所以上装備している時、すべてのスキル経験値獲得量が+{value}%増加します。"
+    info: "+{value}% スキル経験値"
+  grindstone_savant:
+    name: "砥石の達人"
+    desc: "砥石でアイテムのエンチャントを除去した際、{value}%の確率で除去された効果をエンチャント本として回収します。"
+    info: "{value}% エンチャント本回収"
 acf:
   core:
     permission_denied: '<red>申し訳ありませんが、このコマンドを実行する権限がありません。'

@@ -37,6 +37,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public abstract class User {
 
@@ -65,6 +66,12 @@ public abstract class User {
     private boolean blank = true;
 
     // Not persistent data
+    public static final int MAX_EQUIPPED_ABILITIES = 3;
+    public static final long COMBAT_TAG_DURATION_MS = 5000L;
+
+    private final List<Ability> equippedAbilities = new CopyOnWriteArrayList<>();
+    private volatile long lastCombatTime = 0L;
+
     private final Map<String, Multiplier> multipliers;
     private final JobsBatchData jobsBatchData;
     private final Map<CheckType, CheckData> checkData = new ConcurrentHashMap<>();
@@ -550,6 +557,72 @@ public abstract class User {
 
     public void cleanUp() {
 
+    }
+
+    public List<Ability> getEquippedAbilities() {
+        return Collections.unmodifiableList(equippedAbilities);
+    }
+
+    public boolean isAbilityEquipped(Ability ability) {
+        return ability != null && equippedAbilities.contains(ability);
+    }
+
+    public int getEffectiveAbilityLevel(Ability ability) {
+        if (!isAbilityEquipped(ability)) {
+            return 0;
+        }
+        return getAbilityLevel(ability);
+    }
+
+    public boolean equipAbility(Ability ability) {
+        if (ability == null || !ability.isEnabled()) return false;
+        if (getAbilityLevel(ability) <= 0) return false;
+        if (equippedAbilities.contains(ability)) return false;
+        if (equippedAbilities.size() >= MAX_EQUIPPED_ABILITIES) return false;
+        equippedAbilities.add(ability);
+        onEquippedAbilitiesChanged();
+        return true;
+    }
+
+    public boolean unequipAbility(Ability ability) {
+        if (ability == null) return false;
+        boolean removed = equippedAbilities.remove(ability);
+        if (removed) {
+            onEquippedAbilitiesChanged();
+        }
+        return removed;
+    }
+
+    public void setEquippedAbilitiesFromStorage(java.util.Collection<Ability> abilities) {
+        equippedAbilities.clear();
+        for (Ability ability : abilities) {
+            if (ability != null && ability.isEnabled() && getAbilityLevel(ability) > 0 && !equippedAbilities.contains(ability)) {
+                if (equippedAbilities.size() < MAX_EQUIPPED_ABILITIES) {
+                    equippedAbilities.add(ability);
+                }
+            }
+        }
+    }
+
+    public void markInCombat() {
+        this.lastCombatTime = System.currentTimeMillis();
+    }
+
+    public long getLastCombatTime() {
+        return lastCombatTime;
+    }
+
+    public boolean isInCombat() {
+        return System.currentTimeMillis() - lastCombatTime < COMBAT_TAG_DURATION_MS;
+    }
+
+    public long getRemainingCombatSeconds() {
+        long rem = COMBAT_TAG_DURATION_MS - (System.currentTimeMillis() - lastCombatTime);
+        return Math.max(1L, (long) Math.ceil(rem / 1000.0));
+    }
+
+    protected void onEquippedAbilitiesChanged() {
+        // Overridden in BukkitUser to recalculate stats/traits immediately
     }
 
     public SkillsUser toApi() {

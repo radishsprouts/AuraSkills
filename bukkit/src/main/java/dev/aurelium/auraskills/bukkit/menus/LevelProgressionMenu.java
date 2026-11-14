@@ -353,61 +353,11 @@ public class LevelProgressionMenu {
         });
 
         menu.component("mana_ability_unlock", Integer.class, component -> {
-            component.replace("name", p -> {
-                ManaAbility manaAbility = ((Skill) p.menu().getProperty("skill")).getManaAbility();
-                return manaAbility != null ? manaAbility.getDisplayName(p.locale(), false) : null;
-            });
-            component.replace("desc", p -> {
-                ManaAbility manaAbility = ((Skill) p.menu().getProperty("skill")).getManaAbility();
-                if (manaAbility == null) return null;
-                return TextUtil.replace(plugin.getManaAbilityManager().getBaseDescription(manaAbility, plugin.getUser(p.player()), false),
-                        "{value}", NumberUtil.format1(manaAbility.getDisplayValue(1)),
-                        "{duration}", NumberUtil.format1(getDuration(manaAbility, 1)),
-                        "{haste_level}", String.valueOf(ManaAbilities.SPEED_MINE.optionInt("haste_level", 10)));
-            });
-
-            component.shouldShow(t -> {
-                ManaAbility manaAbility = ((Skill) t.menu().getProperty("skill")).getManaAbility();
-                if (manaAbility != null && manaAbility.isEnabled()) {
-                    return manaAbility.getUnlock() == t.value();
-                } else {
-                    return false;
-                }
-            });
+            component.shouldShow(t -> false);
         });
 
         menu.component("mana_ability_level", Integer.class, component -> {
-            component.replace("name", p -> {
-                ManaAbility manaAbility = ((Skill) p.menu().getProperty("skill")).getManaAbility();
-                return manaAbility != null ? manaAbility.getDisplayName(p.locale(), false) : null;
-            });
-            component.replace("desc", p -> {
-                ManaAbility manaAbility = ((Skill) p.menu().getProperty("skill")).getManaAbility();
-                if (manaAbility == null) return null;
-                int manaAbilityLevel = ((p.value() - manaAbility.getUnlock()) / manaAbility.getLevelUp()) + 1;
-
-                return TextUtil.replace(plugin.getManaAbilityManager().getBaseDescription(manaAbility, plugin.getUser(p.player()), false),
-                        "{value}", NumberUtil.format1(manaAbility.getDisplayValue(manaAbilityLevel)),
-                        "{duration}", NumberUtil.format1(getDuration(manaAbility, manaAbilityLevel)),
-                        "{haste_level}", String.valueOf(ManaAbilities.SPEED_MINE.optionInt("haste_level", 10)));
-            });
-            component.replace("level", p -> {
-                ManaAbility manaAbility = ((Skill) p.menu().getProperty("skill")).getManaAbility();
-                if (manaAbility == null) return null;
-                int manaAbilityLevel = ((p.value() - manaAbility.getUnlock()) / manaAbility.getLevelUp()) + 1;
-
-                return RomanNumber.toRoman(manaAbilityLevel, plugin);
-            });
-
-            component.shouldShow(t -> {
-                Skill skill = ((Skill) t.menu().getProperty("skill"));
-                ManaAbility manaAbility = skill.getManaAbility();
-                if (manaAbility != null && manaAbility.isEnabled()) {
-                    return plugin.getManaAbilityManager().getManaAbilityAtLevel(skill, t.value()) != null && manaAbility.getUnlock() != t.value();
-                } else {
-                    return false;
-                }
-            });
+            component.shouldShow(t -> false);
         });
     }
 

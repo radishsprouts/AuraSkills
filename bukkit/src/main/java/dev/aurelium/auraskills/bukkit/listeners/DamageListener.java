@@ -40,6 +40,7 @@ public class DamageListener implements Listener {
             }
             if (player.hasMetadata("NPC")) return;
             if (event.getCause() == EntityDamageEvent.DamageCause.THORNS) return;
+            plugin.getUser(player).markInCombat();
         }
 
         // Handles being damaged
@@ -48,6 +49,7 @@ public class DamageListener implements Listener {
                 return;
             }
             if (target.hasMetadata("NPC")) return;
+            plugin.getUser(target).markInCombat();
         }
 
         if (player == null && !(event.getEntity() instanceof Player)) {
@@ -88,7 +90,9 @@ public class DamageListener implements Listener {
         if (event.getDamager() instanceof Arrow || event.getDamager() instanceof SpectralArrow || event.getDamager() instanceof TippedArrow) {
             return DamageType.BOW;
         }
-        Material material = player.getInventory().getItemInMainHand().getType();
+        Material material = player.hasMetadata("auraskills_dual_wield_attack")
+                ? player.getInventory().getItemInOffHand().getType()
+                : player.getInventory().getItemInMainHand().getType();
         if (material.name().contains("SWORD")) {
             return DamageType.SWORD;
         } else if (material.name().contains("_AXE")) {

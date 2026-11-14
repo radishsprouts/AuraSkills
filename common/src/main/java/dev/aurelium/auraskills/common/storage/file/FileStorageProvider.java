@@ -1,5 +1,7 @@
 package dev.aurelium.auraskills.common.storage.file;
 
+import dev.aurelium.auraskills.api.ability.Abilities;
+import dev.aurelium.auraskills.api.ability.Ability;
 import dev.aurelium.auraskills.api.ability.AbstractAbility;
 import dev.aurelium.auraskills.api.mana.ManaAbility;
 import dev.aurelium.auraskills.api.registry.NamespacedId;
@@ -111,6 +113,19 @@ public class FileStorageProvider extends StorageProvider {
         // Load last job select time
         long time = root.node("last_job_select_time").getLong(0L);
         user.setLastJobSelectTime(time);
+
+        // Load equipped abilities
+        List<String> equippedStrings = root.node("equipped_abilities").getList(String.class);
+        if (equippedStrings != null && !equippedStrings.isEmpty()) {
+            List<Ability> list = new ArrayList<>();
+            for (String str : equippedStrings) {
+                Ability ability = plugin.getAbilityRegistry().getOrNull(NamespacedId.fromString(str));
+                if (ability != null) {
+                    list.add(ability);
+                }
+            }
+            user.setEquippedAbilitiesFromStorage(list);
+        }
 
         return user;
     }
@@ -399,6 +414,17 @@ public class FileStorageProvider extends StorageProvider {
         long selectTime = user.getLastJobSelectTime();
         if (selectTime > 0) {
             root.node("last_job_select_time").set(selectTime);
+        }
+
+        // Save equipped abilities
+        if (user.getEquippedAbilities().isEmpty()) {
+            root.removeChild("equipped_abilities");
+        } else {
+            List<String> abilityNames = new ArrayList<>();
+            for (Ability ability : user.getEquippedAbilities()) {
+                abilityNames.add(ability.getId().toString());
+            }
+            root.node("equipped_abilities").set(abilityNames);
         }
 
         // Save anti-AFK logs

@@ -37,13 +37,14 @@ public class AbilityContext {
         if (!ability.isEnabled()) {
             return true;
         }
-        if (api.getUser(player.getUniqueId()).getAbilityLevel(ability) <= 0) {
+        dev.aurelium.auraskills.api.user.SkillsUser user = api.getUser(player.getUniqueId());
+        if (user.getAbilityLevel(ability) <= 0 || !user.isAbilityEquipped(ability)) {
             return true;
         }
         if (AuraSkillsBukkit.get().getLocationManager().isPluginDisabled(player.getLocation(), player)) {
             return true;
         }
-        if (!api.getUser(player.getUniqueId()).hasSkillPermission(ability.getSkill())) {
+        if (!user.hasSkillPermission(ability.getSkill())) {
             return true;
         }
         if (api.getMainConfig().isDisabledInCreative()) {

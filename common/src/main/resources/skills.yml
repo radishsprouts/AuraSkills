@@ -6,7 +6,10 @@ skills:
       - auraskills/scythe_master
       - auraskills/geneticist
       - auraskills/growth_aura
-    mana_ability: auraskills/replenish
+      - auraskills/auto_replant
+      - auraskills/green_thumb
+      - auraskills/gourmet_feast
+      - auraskills/golden_harvest
     options:
       enabled: true
       max_level: 100
@@ -19,7 +22,10 @@ skills:
       - auraskills/axe_master
       - auraskills/valor
       - auraskills/shredder
-    mana_ability: auraskills/treecapitator
+      - auraskills/timber
+      - auraskills/canopy_harvester
+      - auraskills/berserker_axe
+      - auraskills/nature_blessing
     options:
       enabled: true
       max_level: 100
@@ -32,7 +38,10 @@ skills:
       - auraskills/pick_master
       - auraskills/stamina
       - auraskills/hardened_armor
-    mana_ability: auraskills/speed_mine
+      - auraskills/vein_miner
+      - auraskills/auto_smelt
+      - auraskills/tunnel_bore
+      - auraskills/gem_seeker
     options:
       enabled: true
       max_level: 100
@@ -45,7 +54,10 @@ skills:
       - auraskills/treasure_hunter
       - auraskills/grappler
       - auraskills/epic_catch
-    mana_ability: auraskills/sharp_hook
+      - auraskills/angler_surge
+      - auraskills/poseidon_favor
+      - auraskills/barbed_hook
+      - auraskills/salvager
     options:
       enabled: true
       max_level: 100
@@ -58,7 +70,10 @@ skills:
       - auraskills/spade_master
       - auraskills/metal_detector
       - auraskills/lucky_spades
-    mana_ability: auraskills/terraform
+      - auraskills/excavation_sweep
+      - auraskills/sifter
+      - auraskills/archeologist
+      - auraskills/earth_armor
     options:
       enabled: true
       max_level: 100
@@ -71,7 +86,10 @@ skills:
       - auraskills/bow_master
       - auraskills/piercing
       - auraskills/stun
-    mana_ability: auraskills/charged_shot
+      - auraskills/homing_arrow
+      - auraskills/multishot_barrage
+      - auraskills/sniper_scope
+      - auraskills/apollo_quiver
     options:
       enabled: true
       max_level: 100
@@ -84,7 +102,10 @@ skills:
       - auraskills/mob_master
       - auraskills/immunity
       - auraskills/no_debuff
-    mana_ability: auraskills/absorption
+      - auraskills/guardian_barrier
+      - auraskills/thorns_counter
+      - auraskills/last_stand
+      - auraskills/fortress_stance
     options:
       enabled: true
       max_level: 100
@@ -100,7 +121,10 @@ skills:
       - auraskills/sword_master
       - auraskills/first_strike
       - auraskills/bleed
-    mana_ability: auraskills/lightning_blade
+      - auraskills/dual_wield
+      - auraskills/lifesteal_slash
+      - auraskills/cleaving_arc
+      - auraskills/executioner
     options:
       enabled: true
       max_level: 100
@@ -113,6 +137,10 @@ skills:
       - auraskills/golden_heal
       - auraskills/fleeting
       - auraskills/meal_steal
+      - auraskills/wind_stepper
+      - auraskills/evasion
+      - auraskills/acrobat
+      - auraskills/second_wind
     options:
       enabled: true
       max_level: 100
@@ -125,6 +153,10 @@ skills:
       - auraskills/life_steal
       - auraskills/golden_heart
       - auraskills/wise_effect
+      - auraskills/venomous_coat
+      - auraskills/potion_saver
+      - auraskills/alchemical_shield
+      - auraskills/volatile_brew
     options:
       enabled: true
       max_level: 100
@@ -138,6 +170,10 @@ skills:
       - auraskills/anvil_master
       - auraskills/enchanted_strength
       - auraskills/lucky_table
+      - auraskills/arcane_surge
+      - auraskills/soul_harvester
+      - auraskills/mystic_infusion
+      - auraskills/grindstone_savant
     options:
       enabled: true
       max_level: 100

@@ -80,7 +80,62 @@ public enum Abilities implements Ability {
     FORGER("forging"),
     REPAIRING("forging"),
     ANVIL_MASTER("forging"),
-    SKILL_MENDER("forging");
+    SKILL_MENDER("forging"),
+    // Farming
+    AUTO_REPLANT("farming"),
+    GREEN_THUMB("farming", true),
+    GOURMET_FEAST("farming", true),
+    GOLDEN_HARVEST("farming"),
+    // Foraging
+    TIMBER("foraging"),
+    CANOPY_HARVESTER("foraging", true),
+    BERSERKER_AXE("foraging"),
+    NATURE_BLESSING("foraging"),
+    // Mining
+    VEIN_MINER("mining"),
+    AUTO_SMELT("mining"),
+    TUNNEL_BORE("mining"),
+    GEM_SEEKER("mining"),
+    // Fishing
+    ANGLER_SURGE("fishing", true),
+    POSEIDON_FAVOR("fishing", true),
+    BARBED_HOOK("fishing", true),
+    SALVAGER("fishing"),
+    // Excavation
+    EXCAVATION_SWEEP("excavation", true),
+    SIFTER("excavation"),
+    ARCHEOLOGIST("excavation", true),
+    EARTH_ARMOR("excavation", true),
+    // Archery
+    HOMING_ARROW("archery", true),
+    MULTISHOT_BARRAGE("archery", true),
+    SNIPER_SCOPE("archery"),
+    APOLLO_QUIVER("archery", true),
+    // Defense
+    GUARDIAN_BARRIER("defense", true),
+    THORNS_COUNTER("defense", true),
+    LAST_STAND("defense"),
+    FORTRESS_STANCE("defense", true),
+    // Fighting
+    DUAL_WIELD("fighting"),
+    LIFESTEAL_SLASH("fighting", true),
+    CLEAVING_ARC("fighting"),
+    EXECUTIONER("fighting"),
+    // Agility
+    WIND_STEPPER("agility"),
+    EVASION("agility"),
+    ACROBAT("agility", true),
+    SECOND_WIND("agility"),
+    // Alchemy
+    VENOMOUS_COAT("alchemy", true),
+    POTION_SAVER("alchemy"),
+    ALCHEMICAL_SHIELD("alchemy"),
+    VOLATILE_BREW("alchemy"),
+    // Enchanting
+    ARCANE_SURGE("enchanting"),
+    SOUL_HARVESTER("enchanting", true),
+    MYSTIC_INFUSION("enchanting", true),
+    GRINDSTONE_SAVANT("enchanting");
 
     private final NamespacedId id;
     private final boolean hasSecondaryValue;

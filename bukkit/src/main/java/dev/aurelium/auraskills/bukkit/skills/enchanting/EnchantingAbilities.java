@@ -1,6 +1,8 @@
 package dev.aurelium.auraskills.bukkit.skills.enchanting;
 
 import dev.aurelium.auraskills.api.ability.Abilities;
+import dev.aurelium.auraskills.api.damage.DamageModifier;
+import dev.aurelium.auraskills.api.event.damage.DamageEvent;
 import dev.aurelium.auraskills.api.event.skill.XpGainEvent;
 import dev.aurelium.auraskills.api.stat.StatModifier;
 import dev.aurelium.auraskills.api.stat.Stats;
@@ -12,6 +14,9 @@ import dev.aurelium.auraskills.bukkit.util.VersionUtils;
 import dev.aurelium.auraskills.common.scheduler.TaskRunnable;
 import dev.aurelium.auraskills.common.user.User;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -19,20 +24,25 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.enchantment.EnchantItemEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.AnvilInventory;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.Damageable;
+import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 import org.bukkit.inventory.view.AnvilView;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class EnchantingAbilities extends BukkitAbilityImpl {
 
     public EnchantingAbilities(AuraSkills plugin) {
-        super(plugin, Abilities.XP_CONVERT, Abilities.ENCHANTER, Abilities.XP_WARRIOR, Abilities.ENCHANTED_STRENGTH, Abilities.LUCKY_TABLE);
+        super(plugin, Abilities.XP_CONVERT, Abilities.ENCHANTER, Abilities.XP_WARRIOR, Abilities.ENCHANTED_STRENGTH, Abilities.LUCKY_TABLE,
+                Abilities.ARCANE_SURGE, Abilities.SOUL_HARVESTER, Abilities.MYSTIC_INFUSION, Abilities.GRINDSTONE_SAVANT);
         enchantedStrength();
     }
 
@@ -101,7 +111,10 @@ public class EnchantingAbilities extends BukkitAbilityImpl {
 
                     ItemStack item = player.getInventory().getItemInMainHand();
                     if (!item.getEnchantments().isEmpty()) {
-                        if (failsChecks(player, ability)) continue;
+                        if (failsChecks(player, ability)) {
+                            user.removeStatModifier(modifierName);
+                            continue;
+                        }
 
                         // Apply modifier
                         double strengthPerType = getValue(ability, user);
@@ -178,6 +191,79 @@ public class EnchantingAbilities extends BukkitAbilityImpl {
             }
         } else {
             anvil.setMaximumRepairCost(maxCost);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onArcaneSurgeDamage(DamageEvent event) {
+        var meta = event.getDamageMeta();
+        var attacker = meta.getAttackerAsPlayer();
+        if (attacker != null) {
+            var ability = Abilities.ARCANE_SURGE;
+            if (!isDisabled(ability) && !failsChecks(attacker, ability)) {
+                ItemStack weapon = attacker.getInventory().getItemInMainHand();
+                int totalLevels = 0;
+                for (int lvl : weapon.getEnchantments().values()) {
+                    totalLevels += lvl;
+                }
+                if (totalLevels > 0) {
+                    User user = plugin.getUser(attacker);
+                    double boostPerLvl = getValue(ability, user) / 100.0;
+                    meta.addAttackModifier(new DamageModifier(boostPerLvl * totalLevels, DamageModifier.Operation.ADD_COMBINED));
+                }
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onSoulHarvester(EntityDeathEvent event) {
+        LivingEntity entity = event.getEntity();
+        if (entity.getKiller() == null) return;
+        Player player = entity.getKiller();
+        var ability = Abilities.SOUL_HARVESTER;
+        if (isDisabled(ability) || failsChecks(player, ability)) return;
+
+        User user = plugin.getUser(player);
+        double bonusPercent = getValue(ability, user) / 100.0;
+        event.setDroppedExp((int) (event.getDroppedExp() * (1.0 + bonusPercent)));
+
+        ItemStack mainHand = player.getInventory().getItemInMainHand();
+        if (mainHand.getItemMeta() instanceof Damageable dmg && dmg.hasDamage()) {
+            if (!mainHand.containsEnchantment(Enchantment.MENDING)) {
+                dmg.setDamage(Math.max(0, dmg.getDamage() - 2));
+                mainHand.setItemMeta(dmg);
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onGrindstoneClick(InventoryClickEvent event) {
+        if (event.getInventory().getType() != InventoryType.GRINDSTONE) return;
+        if (event.getSlotType() != InventoryType.SlotType.RESULT) return;
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        var ability = Abilities.GRINDSTONE_SAVANT;
+        if (isDisabled(ability) || failsChecks(player, ability)) return;
+
+        ItemStack top = event.getInventory().getItem(0);
+        ItemStack bot = event.getInventory().getItem(1);
+        Map<Enchantment, Integer> enchants = new HashMap<>();
+        if (top != null) enchants.putAll(top.getEnchantments());
+        if (bot != null) enchants.putAll(bot.getEnchantments());
+
+        if (!enchants.isEmpty()) {
+            User user = plugin.getUser(player);
+            double chance = getValue(ability, user) / 100.0;
+            if (rand.nextDouble() < chance) {
+                Enchantment chosen = enchants.keySet().iterator().next();
+                int lvl = enchants.get(chosen);
+                ItemStack book = new ItemStack(Material.ENCHANTED_BOOK);
+                if (book.getItemMeta() instanceof EnchantmentStorageMeta esm) {
+                    esm.addStoredEnchant(chosen, lvl, true);
+                    book.setItemMeta(esm);
+                    player.getWorld().dropItemNaturally(player.getLocation(), book);
+                    player.playSound(player.getLocation(), Sound.BLOCK_GRINDSTONE_USE, SoundCategory.PLAYERS, 0.7f, 1.4f);
+                }
+            }
         }
     }
 

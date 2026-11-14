@@ -56,13 +56,12 @@ items:
     material: light_blue_dye
     display_name: '<red>{{abilities}}'
     lore:
-    - text: '{{abilities_desc}} {{mana_abilities_desc}}'
+    - text: '{{abilities_desc}}'
       wrap: true
       wrap_style: 1
       styles:
         1: '<gray>'
         2: '<aqua>'
-        3: '<light_purple>'
     - ' '
     - '<yellow>{{abilities_click}}'
   job:

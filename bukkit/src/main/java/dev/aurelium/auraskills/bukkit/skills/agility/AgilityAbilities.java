@@ -35,14 +35,26 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.potion.PotionType;
 
+import dev.aurelium.auraskills.api.damage.DamageModifier;
+import dev.aurelium.auraskills.api.event.damage.DamageEvent;
+import org.bukkit.Particle;
+import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
+import org.bukkit.event.player.PlayerToggleSneakEvent;
+
 import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 public class AgilityAbilities extends BukkitAbilityImpl {
 
+    private final java.util.Map<UUID, Long> secondWindCooldowns = new ConcurrentHashMap<>();
+
     public AgilityAbilities(AuraSkills plugin) {
-        super(plugin, Abilities.LIGHT_FALL, Abilities.JUMPER, Abilities.SUGAR_RUSH, Abilities.FLEETING, Abilities.THUNDER_FALL);
+        super(plugin, Abilities.LIGHT_FALL, Abilities.JUMPER, Abilities.SUGAR_RUSH, Abilities.FLEETING, Abilities.THUNDER_FALL,
+                Abilities.WIND_STEPPER, Abilities.EVASION, Abilities.ACROBAT, Abilities.SECOND_WIND);
         startFleetingRemoveTimer();
     }
 
@@ -367,6 +379,82 @@ public class AgilityAbilities extends BukkitAbilityImpl {
                 // Adds saturation if food is full
                 player.setSaturation(player.getSaturation() + 1f);
             }
+        }
+    }
+
+    @EventHandler
+    public void onWindStepperLoad(UserLoadEvent event) {
+        Player player = Bukkit.getPlayer(event.getUser().getUuid());
+        if (player == null) return;
+        var ability = Abilities.WIND_STEPPER;
+        if (isDisabled(ability) || failsChecks(player, ability)) return;
+        User user = plugin.getUser(player);
+        double speedVal = getValue(ability, user);
+        user.addTraitModifier(new TraitModifier("AuraSkills.Ability.WindStepper", Traits.MOVEMENT_SPEED, speedVal, Operation.ADD));
+    }
+
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    public void onEvasion(EntityDamageByEntityEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+        var ability = Abilities.EVASION;
+        if (isDisabled(ability) || failsChecks(player, ability)) return;
+
+        User user = plugin.getUser(player);
+        double chance = getValue(ability, user) / 100.0;
+        if (rand.nextDouble() < chance) {
+            event.setCancelled(true);
+            player.getWorld().spawnParticle(Particle.POOF, player.getLocation().add(0, 1, 0), 6, 0.2, 0.2, 0.2, 0.05);
+            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 0.7f, 1.6f);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onAcrobatDamage(DamageEvent event) {
+        var meta = event.getDamageMeta();
+        var attacker = meta.getAttackerAsPlayer();
+        if (attacker != null) {
+            var ability = Abilities.ACROBAT;
+            if (!isDisabled(ability) && !failsChecks(attacker, ability)) {
+                if (attacker.getFallDistance() > 0.0f || !attacker.isOnGround()) {
+                    var user = plugin.getUser(attacker);
+                    double boost = getValue(ability, user) / 100.0;
+                    meta.addAttackModifier(new DamageModifier(boost, DamageModifier.Operation.ADD_COMBINED));
+                }
+            }
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onAcrobatHunger(FoodLevelChangeEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+        if (!player.isSprinting()) return;
+        var ability = Abilities.ACROBAT;
+        if (isDisabled(ability) || failsChecks(player, ability)) return;
+        User user = plugin.getUser(player);
+        double reduction = getValue(ability, user) / 100.0;
+        if (rand.nextDouble() < reduction) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onSecondWindSneak(PlayerToggleSneakEvent event) {
+        if (!event.isSneaking()) return;
+        Player player = event.getPlayer();
+        var ability = Abilities.SECOND_WIND;
+        if (isDisabled(ability) || failsChecks(player, ability)) return;
+
+        if (!player.isOnGround() && player.getFallDistance() > 1.2f) {
+            long now = System.currentTimeMillis();
+            long last = secondWindCooldowns.getOrDefault(player.getUniqueId(), 0L);
+            if (now - last < 8000L) return;
+
+            secondWindCooldowns.put(player.getUniqueId(), now);
+            org.bukkit.util.Vector dir = player.getLocation().getDirection().setY(0.25).normalize().multiply(1.2);
+            player.setVelocity(dir);
+            player.setFallDistance(0);
+            player.getWorld().spawnParticle(Particle.CLOUD, player.getLocation().add(0, 0.5, 0), 12, 0.3, 0.3, 0.3, 0.05);
+            player.playSound(player.getLocation(), Sound.ENTITY_BAT_TAKEOFF, SoundCategory.PLAYERS, 0.8f, 1.4f);
         }
     }
 

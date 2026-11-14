@@ -18,13 +18,18 @@ import dev.aurelium.auraskills.common.scheduler.TaskRunnable;
 import dev.aurelium.auraskills.common.user.User;
 import dev.aurelium.auraskills.common.util.text.TextUtil;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.Particle;
+import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.LingeringPotionSplashEvent;
@@ -49,7 +54,8 @@ public class AlchemyAbilities extends BukkitAbilityImpl {
     private final NamespacedKey durationBonusKey;
 
     public AlchemyAbilities(AuraSkills plugin) {
-        super(plugin, Abilities.ALCHEMIST, Abilities.BREWER, Abilities.SPLASHER, Abilities.LINGERING, Abilities.WISE_EFFECT);
+        super(plugin, Abilities.ALCHEMIST, Abilities.BREWER, Abilities.SPLASHER, Abilities.LINGERING, Abilities.WISE_EFFECT,
+                Abilities.VENOMOUS_COAT, Abilities.POTION_SAVER, Abilities.ALCHEMICAL_SHIELD, Abilities.VOLATILE_BREW);
         this.durationBonusKey = new NamespacedKey(plugin, "duration_bonus");
         wiseEffect(); // Start Wise Effect timer task
     }
@@ -322,7 +328,10 @@ public class AlchemyAbilities extends BukkitAbilityImpl {
                     User user = plugin.getUser(player);
 
                     if (!player.getActivePotionEffects().isEmpty()) {
-                        if (failsChecks(player, ability)) continue;
+                        if (failsChecks(player, ability)) {
+                            user.removeStatModifier("AbilityModifier-WiseEffect", true);
+                            continue;
+                        }
                         // Get unique active potion effects
                         Set<PotionEffectType> uniqueTypesSet = new HashSet<>();
                         for (PotionEffect potionEffect : player.getActivePotionEffects()) {
@@ -405,6 +414,76 @@ public class AlchemyAbilities extends BukkitAbilityImpl {
             multiplier = 0.01;
         }
         event.setDamage(event.getDamage() * multiplier);
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onVenomousCoat(EntityDamageByEntityEvent event) {
+        if (!(event.getDamager() instanceof Player player)) return;
+        var ability = Abilities.VENOMOUS_COAT;
+        if (isDisabled(ability) || failsChecks(player, ability)) return;
+
+        if (event.getEntity() instanceof LivingEntity living && !(living instanceof Player)) {
+            User user = plugin.getUser(player);
+            int durationTicks = (int) Math.round(getValue(ability, user) * 20);
+            if (durationTicks > 0) {
+                living.addPotionEffect(new PotionEffect(PotionEffectType.POISON, durationTicks, 0));
+                living.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, durationTicks, 0));
+                living.getWorld().spawnParticle(Particle.ITEM_SLIME, living.getLocation().add(0, 1, 0), 6, 0.2, 0.2, 0.2, 0.05);
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onPotionSaver(PlayerItemConsumeEvent event) {
+        if (event.getItem().getType() != Material.POTION) return;
+        Player player = event.getPlayer();
+        var ability = Abilities.POTION_SAVER;
+        if (isDisabled(ability) || failsChecks(player, ability)) return;
+
+        User user = plugin.getUser(player);
+        double chance = getValue(ability, user) / 100.0;
+        if (new Random().nextDouble() < chance) {
+            ItemStack potion = event.getItem().clone();
+            plugin.getScheduler().scheduleAtEntity(player, () -> {
+                player.getInventory().setItemInMainHand(potion);
+                player.playSound(player.getLocation(), Sound.BLOCK_BREWING_STAND_BREW, SoundCategory.PLAYERS, 0.7f, 1.3f);
+            }, 50, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onAlchemicalShield(EntityDamageEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+        var ability = Abilities.ALCHEMICAL_SHIELD;
+        if (isDisabled(ability) || failsChecks(player, ability)) return;
+
+        int effectsCount = player.getActivePotionEffects().size();
+        if (effectsCount > 0) {
+            User user = plugin.getUser(player);
+            double reductionPerEffect = getValue(ability, user);
+            double totalReduction = Math.min(60.0, reductionPerEffect * effectsCount) / 100.0;
+            event.setDamage(event.getDamage() * (1.0 - totalReduction));
+            player.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, player.getLocation().add(0, 1, 0), 4, 0.2, 0.2, 0.2, 0.1);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onVolatileBrew(PotionSplashEvent event) {
+        ProjectileSource source = event.getPotion().getShooter();
+        if (!(source instanceof Player player)) return;
+        var ability = Abilities.VOLATILE_BREW;
+        if (isDisabled(ability) || failsChecks(player, ability)) return;
+
+        User user = plugin.getUser(player);
+        double damage = getValue(ability, user);
+        Location loc = event.getPotion().getLocation();
+        loc.getWorld().spawnParticle(Particle.POOF, loc, 12, 0.5, 0.5, 0.5, 0.1);
+        player.playSound(loc, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.PLAYERS, 0.6f, 1.4f);
+        for (Entity entity : loc.getWorld().getNearbyEntities(loc, 4, 4, 4)) {
+            if (entity instanceof Monster monster && !monster.isDead()) {
+                monster.damage(damage, player);
+            }
+        }
     }
 
 }

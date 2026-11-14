@@ -14,9 +14,12 @@ import dev.aurelium.auraskills.bukkit.util.CompatUtil;
 import dev.aurelium.auraskills.bukkit.util.VersionUtils;
 import dev.aurelium.auraskills.common.user.User;
 import dev.aurelium.auraskills.common.util.text.TextUtil;
+import dev.aurelium.auraskills.common.scheduler.Task;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
+import org.bukkit.Location;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.attribute.AttributeModifier.Operation;
@@ -31,21 +34,26 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.EquipmentSlotGroup;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class ArcheryAbilities extends BukkitAbilityImpl {
 
     private final UUID legacyStunId = UUID.fromString("886ccad1-20f0-48e4-8634-53f3a76cf2ea");
     private final String legacyStunName = "AureliumSkills-Stun";
     private final String stunKey = "stun_ability";
+    private static final double MAX_HOMING_ANGLE_COS = Math.cos(Math.toRadians(25.0));
 
     public ArcheryAbilities(AuraSkills plugin) {
-        super(plugin, Abilities.RETRIEVAL, Abilities.ARCHER, Abilities.BOW_MASTER, Abilities.PIERCING, Abilities.STUN);
+        super(plugin, Abilities.RETRIEVAL, Abilities.ARCHER, Abilities.BOW_MASTER, Abilities.PIERCING, Abilities.STUN,
+                Abilities.HOMING_ARROW, Abilities.MULTISHOT_BARRAGE, Abilities.SNIPER_SCOPE, Abilities.APOLLO_QUIVER);
     }
 
     private DamageModifier bowMaster(Player player, User user) {
@@ -67,13 +75,16 @@ public class ArcheryAbilities extends BukkitAbilityImpl {
             User user = plugin.getUser(attacker);
             if (meta.getDamageType() == DamageType.BOW) {
                 meta.addAttackModifier(bowMaster(attacker, user));
+                if (meta.getTarget() instanceof LivingEntity livingTarget) {
+                    meta.addAttackModifier(sniperScope(attacker, user, livingTarget));
+                }
             }
         }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void archeryListener(EntityDamageByEntityEvent event) {
-        if (!(event.getDamager() instanceof Arrow arrow)) return;
+        if (!(event.getDamager() instanceof AbstractArrow arrow)) return;
 
         if (!(arrow.getShooter() instanceof Player player)) return;
         if (player.hasMetadata("NPC")) return;
@@ -83,20 +94,53 @@ public class ArcheryAbilities extends BukkitAbilityImpl {
 
         if (event.getEntity() instanceof LivingEntity entity) {
             stun(player, user, entity);
+            apolloPiercingDamage(player, user, entity, event);
         }
 
-        piercing(player, event, user, arrow);
+        if (arrow instanceof Arrow normalArrow) {
+            piercing(player, event, user, normalArrow);
+        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void pierceListener(EntityShootBowEvent event) {
-        if (!(event.getProjectile() instanceof Arrow arrow)) return;
+        if (!(event.getProjectile() instanceof AbstractArrow arrow)) return;
 
         if (!(arrow.getShooter() instanceof Player player)) return;
 
         User user = plugin.getUser(player);
 
-        pierceInit(user, player, arrow);
+        if (arrow instanceof Arrow normalArrow) {
+            pierceInit(user, player, normalArrow);
+        }
+
+        // Apollo Quiver: 矢の消費キャンセル
+        var apollo = Abilities.APOLLO_QUIVER;
+        if (!isDisabled(apollo) && !failsChecks(player, apollo)) {
+            if (rand.nextDouble() < getValue(apollo, user) / 100.0) {
+                ItemStack consumable = event.getConsumable();
+                if (consumable != null && consumable.getType() != Material.AIR) {
+                    ItemStack refund = consumable.clone();
+                    refund.setAmount(1);
+                    arrow.setPickupStatus(AbstractArrow.PickupStatus.CREATIVE_ONLY);
+                    plugin.getScheduler().executeAtEntity(player, task -> player.getInventory().addItem(refund));
+                }
+            }
+        }
+
+        // Homing Arrow: 微誘導タスク
+        var homing = Abilities.HOMING_ARROW;
+        if (!isDisabled(homing) && !failsChecks(player, homing)) {
+            startHomingTask(player, user, arrow);
+        }
+
+        // Multishot Barrage: 連射追加矢
+        var barrage = Abilities.MULTISHOT_BARRAGE;
+        if (!isDisabled(barrage) && !failsChecks(player, barrage)) {
+            if (!arrow.hasMetadata("auraskills_barrage_extra") && rand.nextDouble() < getValue(barrage, user) / 100.0) {
+                spawnBarrageArrow(player, user, arrow);
+            }
+        }
     }
 
     public void stun(Player player, User user, LivingEntity entity) {
@@ -303,6 +347,109 @@ public class ArcheryAbilities extends BukkitAbilityImpl {
                 throw new RuntimeException(e);
             }
         }
+    }
+
+    private DamageModifier sniperScope(Player player, User user, LivingEntity target) {
+        var ability = Abilities.SNIPER_SCOPE;
+        if (target == null || isDisabled(ability) || failsChecks(player, ability)) return DamageModifier.none();
+
+        double dist = player.getLocation().distance(target.getLocation());
+        if (dist >= 10.0) {
+            double maxBonus = getValue(ability, user) / 100.0;
+            double bonus = Math.min(maxBonus, (dist - 10.0) * 0.02);
+            if (bonus > 0) {
+                return new DamageModifier(bonus, DamageModifier.Operation.ADD_COMBINED);
+            }
+        }
+        return DamageModifier.none();
+    }
+
+    private void apolloPiercingDamage(Player player, User user, LivingEntity target, EntityDamageByEntityEvent event) {
+        var ability = Abilities.APOLLO_QUIVER;
+        if (isDisabled(ability) || failsChecks(player, ability)) return;
+        if (player.hasMetadata("auraskills_apollo_pierce")) return;
+
+        double ignoreRatio = getSecondaryValue(ability, user) / 100.0;
+        if (ignoreRatio > 0) {
+            double extraDmg = Math.max(0.5, event.getDamage() * ignoreRatio * 0.35);
+            player.setMetadata("auraskills_apollo_pierce", new FixedMetadataValue(plugin, true));
+            try {
+                target.damage(extraDmg);
+            } finally {
+                player.removeMetadata("auraskills_apollo_pierce", plugin);
+            }
+        }
+    }
+
+    private void startHomingTask(Player shooter, User user, AbstractArrow arrow) {
+        double searchRange = getValue(Abilities.HOMING_ARROW, user);
+        double turnStrength = Math.min(0.08, getSecondaryValue(Abilities.HOMING_ARROW, user));
+
+        final int[] ticksRun = {0};
+        final AtomicReference<Task> taskRef = new AtomicReference<>();
+        Task task = plugin.getScheduler().timerAtEntity(arrow, () -> {
+            ticksRun[0]++;
+            if (!arrow.isValid() || arrow.isDead() || arrow.isInBlock() || arrow.isOnGround() || ticksRun[0] > 60) {
+                if (taskRef.get() != null) taskRef.get().cancel();
+                return;
+            }
+            Vector vel = arrow.getVelocity();
+            double speed = vel.length();
+            if (speed < 0.3) {
+                if (taskRef.get() != null) taskRef.get().cancel();
+                return;
+            }
+            Vector currentDir = vel.clone().normalize();
+            Location arrowLoc = arrow.getLocation();
+
+            LivingEntity bestTarget = null;
+            double bestDistSq = searchRange * searchRange;
+
+            for (Entity entity : arrow.getNearbyEntities(searchRange, searchRange, searchRange)) {
+                if (!(entity instanceof Monster target)) continue;
+                if (target.isDead() || !target.isValid() || target.isInvisible()) continue;
+                if (target instanceof Tameable t && t.isTamed()) continue;
+
+                Location targetCenter = target.getLocation().add(0, target.getHeight() * 0.65, 0);
+                Vector toTarget = targetCenter.toVector().subtract(arrowLoc.toVector());
+                double distSq = toTarget.lengthSquared();
+                if (distSq > bestDistSq || distSq < 0.25) continue;
+
+                Vector toTargetDir = toTarget.clone().normalize();
+                double dot = currentDir.dot(toTargetDir);
+                if (dot < MAX_HOMING_ANGLE_COS) continue;
+
+                if (!shooter.hasLineOfSight(target)) continue;
+
+                bestDistSq = distSq;
+                bestTarget = target;
+            }
+
+            if (bestTarget != null) {
+                Location targetCenter = bestTarget.getLocation().add(0, bestTarget.getHeight() * 0.65, 0);
+                Vector desiredDir = targetCenter.toVector().subtract(arrowLoc.toVector()).normalize();
+                Vector steeredDir = currentDir.multiply(1.0 - turnStrength).add(desiredDir.multiply(turnStrength)).normalize();
+                Vector newVel = steeredDir.multiply(speed);
+                newVel.setY(newVel.getY() + 0.015);
+                arrow.setVelocity(newVel);
+            }
+        }, 50L, 50L, TimeUnit.MILLISECONDS);
+        taskRef.set(task);
+    }
+
+    private void spawnBarrageArrow(Player player, User user, AbstractArrow originalArrow) {
+        Vector vel = originalArrow.getVelocity();
+        Location loc = originalArrow.getLocation();
+        double angleOffset = Math.toRadians((rand.nextDouble() - 0.5) * 12.0);
+        Vector extraVel = vel.clone().rotateAroundY(angleOffset);
+
+        AbstractArrow extraArrow = player.getWorld().spawnArrow(loc, extraVel, (float) extraVel.length(), 0f);
+        extraArrow.setShooter(player);
+        extraArrow.setPickupStatus(AbstractArrow.PickupStatus.CREATIVE_ONLY);
+        extraArrow.setMetadata("auraskills_barrage_extra", new FixedMetadataValue(plugin, true));
+
+        double dmgRatio = getSecondaryValue(Abilities.MULTISHOT_BARRAGE, user) / 100.0;
+        extraArrow.setDamage(originalArrow.getDamage() * dmgRatio);
     }
 
     // Below 1.20.2

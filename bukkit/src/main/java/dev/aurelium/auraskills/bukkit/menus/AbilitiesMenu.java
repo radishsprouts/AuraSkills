@@ -2,12 +2,11 @@ package dev.aurelium.auraskills.bukkit.menus;
 
 import dev.aurelium.auraskills.api.ability.Ability;
 import dev.aurelium.auraskills.api.ability.AbstractAbility;
-import dev.aurelium.auraskills.api.mana.ManaAbilities;
-import dev.aurelium.auraskills.api.mana.ManaAbility;
 import dev.aurelium.auraskills.api.skill.Skill;
 import dev.aurelium.auraskills.api.skill.Skills;
 import dev.aurelium.auraskills.api.util.NumberUtil;
 import dev.aurelium.auraskills.bukkit.AuraSkills;
+import dev.aurelium.auraskills.bukkit.menus.shared.EquippedAbilitiesItem;
 import dev.aurelium.auraskills.bukkit.menus.shared.GlobalItems;
 import dev.aurelium.auraskills.common.ability.AbilityUtil;
 import dev.aurelium.auraskills.common.user.User;
@@ -17,6 +16,14 @@ import dev.aurelium.auraskills.common.util.text.TextUtil;
 import dev.aurelium.slate.builder.MenuBuilder;
 import dev.aurelium.slate.function.TemplateSlot;
 import dev.aurelium.slate.inv.content.SlotPos;
+import org.bukkit.Material;
+import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemFlag;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.*;
 
@@ -32,6 +39,9 @@ public class AbilitiesMenu {
         var globalItems = new GlobalItems(plugin);
         menu.item("back", globalItems::backToLevelProgression);
         menu.fillItem(globalItems::fill);
+
+        // Equipped passive slots 1, 2, 3
+        new EquippedAbilitiesItem(plugin).register(menu, "abilities");
 
         menu.replaceTitle("skill", p -> ((Skill) p.menu().getProperty("skill")).getDisplayName(p.locale(), false));
 
@@ -72,7 +82,6 @@ public class AbilitiesMenu {
                 Skill skill = (Skill) m.menu().getProperty("skill");
                 User user = plugin.getUser(m.player());
                 Set<Ability> unlockedAbilities = new HashSet<>();
-                // Add abilities that player has not unlocked yet
                 for (Ability ability : skill.getAbilities()) {
                     if (user.getAbilityLevel(ability) >= 1 && ability.isEnabled()) {
                         unlockedAbilities.add(ability);
@@ -81,47 +90,61 @@ public class AbilitiesMenu {
                 return unlockedAbilities;
             });
 
+            template.modify(t -> {
+                User user = plugin.getUser(t.player());
+                ItemStack is = t.item();
+                if (user.isAbilityEquipped(t.value())) {
+                    is.setType(Material.EMERALD);
+                    ItemMeta meta = is.getItemMeta();
+                    if (meta != null) {
+                        meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+                        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                        is.setItemMeta(meta);
+                    }
+                }
+                return is;
+            });
+
+            template.onClick(c -> {
+                Player player = c.player();
+                User user = plugin.getUser(player);
+                Ability ability = c.value();
+
+                if (user.isInCombat()) {
+                    long remainingMs = 5000L - (System.currentTimeMillis() - user.getLastCombatTime());
+                    double sec = Math.max(0.1, remainingMs / 1000.0);
+                    player.sendMessage("§c戦闘中はパッシブスキルを変更できません！ (残り " + String.format(Locale.ROOT, "%.1f", sec) + "秒)");
+                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, SoundCategory.PLAYERS, 0.7f, 0.8f);
+                    return;
+                }
+
+                if (user.isAbilityEquipped(ability)) {
+                    user.unequipAbility(ability);
+                    player.playSound(player.getLocation(), Sound.ENTITY_ITEM_FRAME_REMOVE_ITEM, SoundCategory.PLAYERS, 0.7f, 1.2f);
+                } else {
+                    if (user.getEquippedAbilities().size() >= 3) {
+                        player.sendMessage("§cパッシブスキルは最大3個までしかセットできません！先に装備を解除してください。");
+                        player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, SoundCategory.PLAYERS, 0.7f, 0.8f);
+                        return;
+                    }
+                    user.equipAbility(ability);
+                    player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.PLAYERS, 0.7f, 1.2f);
+                }
+                plugin.getSlate().openMenu(player, "abilities", c.menu().getProperties());
+            });
+
             template.slotPos(abilitySlotPos("unlocked_ability"));
         });
 
-        menu.template("locked_mana_ability", ManaAbility.class, template -> {
-            template.replace("name", p -> p.value().getDisplayName(p.locale(), false));
-            template.replace("desc", p -> TextUtil.replace(plugin.getManaAbilityManager().getBaseDescription(p.value(), plugin.getUser(p.player()), false),
-                    "{value}", NumberUtil.format1(p.value().getDisplayValue(1)),
-                    "{duration}", NumberUtil.format1(getDuration(p.value()))));
-            template.replace("skill", p -> ((Skill) p.menu().getProperty("skill")).getDisplayName(p.locale(), false));
-            template.replace("level", p -> RomanNumber.toRoman(p.value().getUnlock(), plugin));
-
-            template.definedContexts(m -> {
-                Skill skill = (Skill) m.menu().getProperty("skill");
-                ManaAbility manaAbility = skill.getManaAbility();
-
-                Set<ManaAbility> locked = new HashSet<>();
-                if (manaAbility != null && manaAbility.isEnabled() && plugin.getUser(m.player()).getManaAbilityLevel(manaAbility) <= 0) {
-                    locked.add(manaAbility);
+        menu.component("equip_status", Ability.class, component -> {
+            component.replace("status", p -> {
+                User user = plugin.getUser(p.player());
+                if (user.isAbilityEquipped(p.value())) {
+                    return "§a[セット中] (クリックで解除)";
+                } else {
+                    return "§e(クリックでセット)";
                 }
-                return locked;
             });
-
-            template.modify(t -> t.value().isEnabled() ? t.item() : null); // Hide item when disabled
-        });
-
-        menu.template("unlocked_mana_ability", ManaAbility.class, template -> {
-            template.replace("name", p -> p.value().getDisplayName(p.locale(), false));
-
-            template.definedContexts(m -> {
-                Skill skill = (Skill) m.menu().getProperty("skill");
-                User user = plugin.getUser(m.player());
-                Set<ManaAbility> unlocked = new HashSet<>();
-                // Add abilities that player has not unlocked yet
-                ManaAbility manaAbility = skill.getManaAbility();
-                if (manaAbility != null && manaAbility.isEnabled() && user.getManaAbilityLevel(manaAbility) >= 1) {
-                    unlocked.add(manaAbility);
-                }
-                return unlocked;
-            });
-
-            template.modify(t -> t.value().isEnabled() ? t.item() : null); // Hide item when disabled
         });
 
         menu.component("your_level", AbstractAbility.class, component -> {
@@ -146,12 +169,6 @@ public class AbilitiesMenu {
                             "{value_2}", AbilityUtil.getUpgradeValue2(ability, level, format),
                             "{chance_value}", plugin.getAbilityManager().getChanceValue(ability, level),
                             "{guaranteed_value}", plugin.getAbilityManager().getGuaranteedValue(ability, level));
-                } else if (p.value() instanceof ManaAbility manaAbility) {
-                    int level = user.getManaAbilityLevel(manaAbility);
-                    String desc = plugin.getManaAbilityManager().getBaseDescription(manaAbility, user, false);
-                    return TextUtil.replace(desc,
-                            "{value}", AbilityUtil.getUpgradeValue(manaAbility, level, format),
-                            "{duration}", AbilityUtil.getUpgradeDuration(manaAbility, level, format));
                 }
                 return null;
             });
@@ -169,11 +186,6 @@ public class AbilitiesMenu {
                     return TextUtil.replace(desc,
                             "{value}", NumberUtil.format1(ability.getValue(user.getAbilityLevel(ability))),
                             "{value_2}", NumberUtil.format1(ability.getSecondaryValue(user.getAbilityLevel(ability))));
-                } else if (p.value() instanceof ManaAbility manaAbility) {
-                    String desc = plugin.getManaAbilityManager().getBaseDescription(manaAbility, user, false);
-                    return TextUtil.replace(desc,
-                            "{value}", NumberUtil.format1(manaAbility.getDisplayValue(user.getManaAbilityLevel(manaAbility))),
-                            "{duration}", NumberUtil.format1(AbilityUtil.getDuration(manaAbility, user.getManaAbilityLevel(manaAbility))));
                 }
                 return null;
             });
@@ -197,14 +209,6 @@ public class AbilitiesMenu {
             maxLevel = maxAllowedBySkill;
         }
         return user.getAbstractAbilityLevel(ability) < maxLevel;
-    }
-
-    private double getDuration(ManaAbility manaAbility) {
-        if (manaAbility == ManaAbilities.LIGHTNING_BLADE) {
-            return ManaAbilities.LIGHTNING_BLADE.optionDouble("base_duration", 5.0);
-        } else {
-            return manaAbility.getValue(1);
-        }
     }
 
     private TemplateSlot<Ability> abilitySlotPos(String itemName) {
@@ -236,7 +240,11 @@ public class AbilitiesMenu {
                 }
             }
             int index = abilityList.indexOf(t.value());
-            return SlotPos.of(1, 2 + index);
+            if (index < 5) {
+                return SlotPos.of(1, 2 + index);
+            } else {
+                return SlotPos.of(2, 2 + (index - 5));
+            }
         };
     }
 

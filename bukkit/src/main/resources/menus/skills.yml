@@ -33,6 +33,18 @@ items:
     - '<gray>{{stats_desc}}'
     - ' '
     - '<yellow>{{stats_click}}'
+  equipped_slot_1:
+    pos: 0,3
+    material: gray_dye
+    display_name: '<yellow>装備スロット #1'
+  equipped_slot_2:
+    pos: 0,4
+    material: gray_dye
+    display_name: '<yellow>装備スロット #2'
+  equipped_slot_3:
+    pos: 0,5
+    material: gray_dye
+    display_name: '<yellow>装備スロット #3'
 templates:
   skill:
     contexts:

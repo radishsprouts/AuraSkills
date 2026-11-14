@@ -291,6 +291,182 @@ abilities:
     name: Skill Mender
     desc: Gaining skill XP has a {value}% chance to repair a held item or worn armor piece with the Mending enchantment by 1 durability per 2 skill XP.
     info: "{value}% Mend Chance"
+  auto_replant:
+    name: "Auto Replant"
+    desc: "Harvesting mature crops with a hoe automatically replants them, with a {value}% chance to harvest and replant adjacent 3x3 crops."
+    info: "{value}% 3x3 Harvest"
+  green_thumb:
+    name: "Green Thumb"
+    desc: "Planting crops has a {value}% chance to accelerate initial growth, and applying bone meal spreads growth to nearby crops."
+    info: "{value}% Growth Acceleration"
+  gourmet_feast:
+    name: "Gourmet Feast"
+    desc: "Consuming farm foods restores {value}% more saturation and grants Speed or Strength for 10 seconds."
+    info: "+{value}% Saturation"
+  golden_harvest:
+    name: "Golden Harvest"
+    desc: "{value}% chance when harvesting mature crops to drop golden nuggets, golden carrots, or golden apples along with extra XP."
+    info: "{value}% Golden Drop Chance"
+  timber:
+    name: "Timber"
+    desc: "Chopping a log with an axe breaks up to {value} connected tree logs in a single strike."
+    info: "{value} Max Logs"
+  canopy_harvester:
+    name: "Canopy Harvester"
+    desc: "Breaking a log decays nearby leaves instantly, with a {value}% chance for bonus saplings, apples, and sticks."
+    info: "{value}% Leaf Bonus"
+  berserker_axe:
+    name: "Berserker Axe"
+    desc: "Striking mobs with an axe increases your attack speed and movement speed by {value}% per hit (stacks up to 5 times)."
+    info: "+{value}% Speed / Hit"
+  nature_blessing:
+    name: "Nature's Blessing"
+    desc: "Chopping trees restores hunger/health with a {value}% chance to double log drops."
+    info: "{value}% Double Drop & Heal"
+  vein_miner:
+    name: "Vein Miner"
+    desc: "Mining an ore breaks up to {value} connected matching ore blocks in a single strike."
+    info: "{value} Max Ores"
+  auto_smelt:
+    name: "Auto Smelt"
+    desc: "{value}% chance for mined raw iron, copper, and gold to drop pre-smelted with bonus XP."
+    info: "{value}% Smelt Chance"
+  tunnel_bore:
+    name: "Tunnel Bore"
+    desc: "Sneak mining stone blocks digs a 3x3 horizontal area with a {value}% trigger chance."
+    info: "{value}% 3x3 Bore Chance"
+  gem_seeker:
+    name: "Gem Seeker"
+    desc: "{value}% chance when mining deepslate or stone to discover hidden raw gemstones."
+    info: "{value}% Gem Drop Chance"
+  angler_surge:
+    name: "Angler Surge"
+    desc: "Reduces bite wait time by {value}%, and reeling in has a {value}% chance to double the caught loot."
+    info: "+{value}% Catch Rate"
+  poseidon_favor:
+    name: "Poseidon's Favor"
+    desc: "Increases attack damage by {value}% while submerged in water or during rainfall."
+    info: "+{value}% Aquatic Damage"
+  barbed_hook:
+    name: "Barbed Hook"
+    desc: "Hooking and reeling in an entity deals {value} damage and inflicts weakness."
+    info: "{value} Hook Damage"
+  salvager:
+    name: "Salvager"
+    desc: "Caught damaged tools and armor are automatically repaired by {value}% durability upon reeling in."
+    info: "+{value}% Durability Restored"
+  excavation_sweep:
+    name: "Excavation Sweep"
+    desc: "Shoveling breaks up to {value} connected soft earth blocks in a single strike."
+    info: "{value} Max Blocks"
+  sifter:
+    name: "Sifter"
+    desc: "Digging gravel, sand, or mud has a {value}% chance to sift out flint, clay, copper, or iron nuggets."
+    info: "{value}% Sift Chance"
+  archeologist:
+    name: "Archeologist"
+    desc: "{value}% chance when digging to uncover ancient relics, bones, emeralds, or pottery sherds."
+    info: "{value}% Relic Find Chance"
+  earth_armor:
+    name: "Earth Armor"
+    desc: "Standing on natural earth or stone reduces incoming damage by {value}%."
+    info: "{value}% Damage Reduction"
+  homing_arrow:
+    name: "Homing Arrow"
+    desc: "Fired arrows gently steer towards hostile monsters within a 25-degree cone (+{value}% steering strength)."
+    info: "+{value}% Gentle Guidance"
+  multishot_barrage:
+    name: "Multishot Barrage"
+    desc: "Bow shots have a {value}% chance to fire an additional auxiliary arrow without consuming ammo."
+    info: "{value}% Free Extra Arrow"
+  sniper_scope:
+    name: "Sniper Scope"
+    desc: "Arrow damage increases by {value}% for every 10 blocks of distance traveled to the target."
+    info: "+{value}% Dmg / 10 Blocks"
+  apollo_quiver:
+    name: "Apollo's Quiver"
+    desc: "{value}% chance on hitting a mob to refund your arrow and pierce through enemy armor."
+    info: "{value}% Ammo Refund & Pierce"
+  guardian_barrier:
+    name: "Guardian Barrier"
+    desc: "Taking damage grants {value} absorption health for 15 seconds and negates knockback."
+    info: "{value} Absorption Barrier"
+  thorns_counter:
+    name: "Thorns Counter"
+    desc: "Blocking attacks with a shield reflects {value}% damage back to the attacker and knocks them back."
+    info: "{value}% Damage Reflected"
+  last_stand:
+    name: "Last Stand"
+    desc: "When falling below 30% HP, incoming damage is reduced by {value}% and Regeneration II is activated."
+    info: "{value}% Emergency Armor"
+  fortress_stance:
+    name: "Fortress Stance"
+    desc: "Remaining stationary for 3 seconds increases defense and attack damage by {value}%."
+    info: "+{value}% Stationary Buff"
+  dual_wield:
+    name: "Dual Wield"
+    desc: "Right-click with an off-hand weapon to execute an independent off-hand melee attack with +{value}% sweep bonus."
+    info: "+{value}% Offhand Mastery"
+  lifesteal_slash:
+    name: "Lifesteal Slash"
+    desc: "Melee hits restore health equal to {value}% of damage dealt to enemy monsters."
+    info: "{value}% Lifesteal"
+  cleaving_arc:
+    name: "Cleaving Arc"
+    desc: "Sweep attacks deal {value}% damage in a wider radius to all surrounding hostile monsters."
+    info: "+{value}% Sweep Arc Damage"
+  executioner:
+    name: "Executioner"
+    desc: "Deals +{value}% bonus damage to targets below 40% health, granting a speed burst upon slaying."
+    info: "+{value}% Execute Damage"
+  wind_stepper:
+    name: "Wind Stepper"
+    desc: "Increases your constant movement speed by {value}."
+    info: "+{value} Movement Speed"
+  evasion:
+    name: "Evasion"
+    desc: "{value}% chance to completely dodge and negate incoming enemy melee and projectile damage."
+    info: "{value}% Dodge Chance"
+  acrobat:
+    name: "Acrobat"
+    desc: "Critical hits deal +{value}% damage while jumping, and sprinting consumes {value}% less hunger."
+    info: "+{value}% Jump Crit Damage"
+  second_wind:
+    name: "Second Wind"
+    desc: "Sneaking in mid-air dashes forward, resetting fall distance (8-second cooldown)."
+    info: "{value}s Air Dash Ready"
+  venomous_coat:
+    name: "Venomous Coat"
+    desc: "Melee attacks coat enemies in toxic venom, applying Poison and Slowness for {value} seconds."
+    info: "{value}s Poison & Slow"
+  potion_saver:
+    name: "Potion Saver"
+    desc: "Drinking a potion has a {value}% chance to preserve the potion without consuming the bottle."
+    info: "{value}% Refill Chance"
+  alchemical_shield:
+    name: "Alchemical Shield"
+    desc: "Each active potion effect on your body reduces incoming damage by {value}%."
+    info: "{value}% Dmg Reduction / Buff"
+  volatile_brew:
+    name: "Volatile Brew"
+    desc: "Throwing splash or lingering potions causes an alchemical shockwave dealing {value} magic damage to hostile monsters."
+    info: "{value} Burst Damage"
+  arcane_surge:
+    name: "Arcane Surge"
+    desc: "Increases attack damage by {value}% for every enchantment level on your held weapon."
+    info: "+{value}% Dmg / Enchant Level"
+  soul_harvester:
+    name: "Soul Harvester"
+    desc: "Slaying hostile mobs drops +{value}% extra XP and repairs non-Mending equipped gear."
+    info: "+{value}% XP & Gear Repair"
+  mystic_infusion:
+    name: "Mystic Infusion"
+    desc: "Wearing at least 3 enchanted armor pieces increases all skill XP gained by {value}%."
+    info: "+{value}% Skill XP Bonus"
+  grindstone_savant:
+    name: "Grindstone Savant"
+    desc: "Disenchanting items on a grindstone has a {value}% chance to salvage a removed enchantment as an Enchanted Book."
+    info: "{value}% Enchant Extraction"
 acf:
   core:
     permission_denied: "<red>I'm sorry, but you do not have permission to perform this command."

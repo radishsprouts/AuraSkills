@@ -1,7 +1,11 @@
 package dev.aurelium.auraskills.bukkit.user;
 
+import dev.aurelium.auraskills.api.ability.Abilities;
 import dev.aurelium.auraskills.api.skill.Skill;
+import dev.aurelium.auraskills.api.trait.TraitModifier;
+import dev.aurelium.auraskills.api.trait.Traits;
 import dev.aurelium.auraskills.api.user.SkillsUser;
+import dev.aurelium.auraskills.api.util.AuraSkillsModifier;
 import dev.aurelium.auraskills.bukkit.AuraSkills;
 import dev.aurelium.auraskills.bukkit.hooks.BukkitLuckPermsHook;
 import dev.aurelium.auraskills.bukkit.item.TraitModifiers;
@@ -10,6 +14,10 @@ import dev.aurelium.auraskills.common.api.implementation.ApiSkillsUser;
 import dev.aurelium.auraskills.common.user.User;
 import dev.aurelium.auraskills.paper.util.AdventureUtil;
 import net.kyori.adventure.text.Component;
+import dev.aurelium.auraskills.api.trait.Trait;
+import dev.aurelium.auraskills.bukkit.skills.foraging.ForagingAbilities;
+import dev.aurelium.auraskills.bukkit.skills.mining.MiningAbilities;
+import dev.aurelium.auraskills.bukkit.trait.GatheringLuckTraits;
 import org.bukkit.Bukkit;
 import org.bukkit.SoundCategory;
 import org.bukkit.entity.Player;
@@ -245,6 +253,32 @@ public class BukkitUser extends User {
         if (player != null) {
             player.playSound(player.getLocation(), sound, SoundCategory.valueOf(category.toUpperCase(Locale.ROOT)), volume, pitch);
         }
+    }
+
+    @Override
+    protected void onEquippedAbilitiesChanged() {
+        if (player == null) return;
+        plugin.getScheduler().executeAtEntity(player, task -> {
+            var gatheringLuck = plugin.getTraitManager().getTraitImpl(GatheringLuckTraits.class);
+            if (gatheringLuck != null) {
+                for (Trait trait : gatheringLuck.getTraits()) {
+                    gatheringLuck.reload(player, trait);
+                }
+            }
+            removeStatModifier(ForagingAbilities.VALOR_MODIFIER_NAME);
+            removeStatModifier(MiningAbilities.STAMINA_MODIFIER_NAME);
+            removeStatModifier("AureliumSkills.Ability.WiseEffect");
+            removeStatModifier("AureliumSkills.Ability.EnchantedStrength");
+            removeStatModifier("AuraSkills.Ability.MysticInfusion");
+            removeTraitModifier("AuraSkills.Ability.WindStepper");
+            if (isAbilityEquipped(Abilities.WIND_STEPPER)) {
+                int level = getAbilityLevel(Abilities.WIND_STEPPER);
+                if (level > 0) {
+                    addTraitModifier(new TraitModifier("AuraSkills.Ability.WindStepper", Traits.MOVEMENT_SPEED, Abilities.WIND_STEPPER.getValue(level), AuraSkillsModifier.Operation.ADD));
+                }
+            }
+            plugin.getModifierManager().applyModifiers(player, true);
+        });
     }
 
     @Override
