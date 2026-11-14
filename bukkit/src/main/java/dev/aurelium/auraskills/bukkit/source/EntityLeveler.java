@@ -18,6 +18,7 @@ import dev.aurelium.auraskills.common.source.SourceTypes;
 import dev.aurelium.auraskills.common.user.User;
 import dev.aurelium.auraskills.common.util.data.Pair;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.entity.*;
@@ -30,8 +31,12 @@ import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 public class EntityLeveler extends SourceLeveler {
@@ -56,52 +61,106 @@ public class EntityLeveler extends SourceLeveler {
 
         MobCombatTracker tracker = ((BukkitLevelManager) plugin.getLevelManager()).getMobCombatTracker();
         if (tracker != null && tracker.isTrapKill(entity)) {
+            tracker.removeCombatRecord(entity.getUniqueId());
             return;
         }
 
         // Prevent XP if LevelledMobs chunk kill max was reached
         if (entity.getPersistentDataContainer().has(chunkKillMaxKey, PersistentDataType.INTEGER)) {
+            if (tracker != null) tracker.removeCombatRecord(entity.getUniqueId());
             return;
         }
 
-        // Ensure that the entity has a killer
-        @Nullable
-        Player player = entity.getKiller();
-        // Ensure that the killer is an entity
-        Entity damagerEntity;
-        DamageCause damageCause;
-        if (entity.getLastDamageCause() instanceof EntityDamageByEntityEvent damageEvent) {
-            damagerEntity = damageEvent.getDamager();
-            damageCause = damageEvent.getCause();
-        } else {
-            player = getBleedDamager(entity);
-            damagerEntity = player;
-            damageCause = DamageCause.CUSTOM;
+        MobCombatTracker.CombatRecord record = tracker != null ? tracker.removeCombatRecord(entity.getUniqueId()) : null;
+        Map<UUID, Double> playerDamages = record != null ? record.getPlayerDamages() : Collections.emptyMap();
+
+        Location deathLoc = entity.getLocation();
+        DamageCause defaultDamageCause = DamageCause.ENTITY_ATTACK;
+        if (entity.getLastDamageCause() != null) {
+            defaultDamageCause = entity.getLastDamageCause().getCause();
         }
-        if (player == null) return;
 
-        User user = plugin.getUser(player);
+        // Collect valid participating players within 64 blocks of the death location in the same world
+        Map<Player, Double> validPlayers = new HashMap<>();
+        double totalValidDamage = 0.0;
 
-        // Resolve damager from EntityDamageByEntityEvent
-        EntityXpSource.EntityDamagers damager;
-        if (damagerEntity instanceof Player) {
-            damager = EntityXpSource.EntityDamagers.PLAYER;
-        } else if (damagerEntity instanceof Projectile) {
-            damager = EntityXpSource.EntityDamagers.PROJECTILE;
-        } else {
+        for (Map.Entry<UUID, Double> entry : playerDamages.entrySet()) {
+            Player p = Bukkit.getPlayer(entry.getKey());
+            if (p != null && p.isOnline()) {
+                if (Objects.equals(p.getWorld(), deathLoc.getWorld())) {
+                    if (deathLoc.distanceSquared(p.getLocation()) <= 64.0 * 64.0) {
+                        double dmg = entry.getValue();
+                        if (dmg > 0.0) {
+                            validPlayers.put(p, dmg);
+                            totalValidDamage += dmg;
+                        }
+                    }
+                }
+            }
+        }
+
+        // If no tracked valid player, fallback to entity.getKiller()
+        if (validPlayers.isEmpty()) {
+            Player killer = entity.getKiller();
+            if (killer == null) {
+                killer = getBleedDamager(entity);
+            }
+            if (killer != null && killer.isOnline() && Objects.equals(killer.getWorld(), deathLoc.getWorld())) {
+                if (deathLoc.distanceSquared(killer.getLocation()) <= 64.0 * 64.0) {
+                    validPlayers.put(killer, 1.0);
+                    totalValidDamage = 1.0;
+                }
+            }
+        }
+
+        if (validPlayers.isEmpty() || totalValidDamage <= 0.0) {
             return;
         }
 
-        SkillSource<EntityXpSource> skillSource = getSource(entity, damager, EntityXpSource.EntityTriggers.DEATH, damageCause);
-        if (skillSource == null) return;
+        // 1. Distribute Vanilla XP directly to participating players by damage ratio
+        int totalDroppedExp = event.getDroppedExp();
+        if (totalDroppedExp > 0) {
+            event.setDroppedExp(0); // Cancel ground orb drop to prevent snatching
+            for (Map.Entry<Player, Double> entry : validPlayers.entrySet()) {
+                Player p = entry.getKey();
+                double ratio = entry.getValue() / totalValidDamage;
+                int playerXp = Math.max(1, (int) Math.round(totalDroppedExp * ratio));
+                p.giveExp(playerXp);
+            }
+        }
 
-        EntityXpSource source = skillSource.source();
-        Skill skill = skillSource.skill();
+        // 2. Distribute AuraSkills skill XP by damage ratio
+        for (Map.Entry<Player, Double> entry : validPlayers.entrySet()) {
+            Player p = entry.getKey();
+            double ratio = entry.getValue() / totalValidDamage;
 
-        if (failsChecks(player, entity.getLocation(), skill)) return;
+            EntityXpSource.EntityDamagers damagerType = record != null
+                    ? record.getPlayerDamagerType(p.getUniqueId())
+                    : EntityXpSource.EntityDamagers.PLAYER;
 
-        plugin.getLevelManager().addEntityXp(user, skill, source, getSpawnerMultiplier(entity, skill) * getLevelledMobsMultiplier(entity) * source.getXp(),
-                entity, damagerEntity, event);
+            DamageCause cause = defaultDamageCause;
+            if (damagerType == EntityXpSource.EntityDamagers.PROJECTILE) {
+                cause = DamageCause.PROJECTILE;
+            }
+
+            SkillSource<EntityXpSource> skillSource = getSource(entity, damagerType, EntityXpSource.EntityTriggers.DEATH, cause);
+            if (skillSource == null && damagerType != EntityXpSource.EntityDamagers.PLAYER) {
+                // Fallback to PLAYER damager if PROJECTILE source is not defined
+                skillSource = getSource(entity, EntityXpSource.EntityDamagers.PLAYER, EntityXpSource.EntityTriggers.DEATH, DamageCause.ENTITY_ATTACK);
+            }
+            if (skillSource == null) continue;
+
+            EntityXpSource source = skillSource.source();
+            Skill skill = skillSource.skill();
+
+            if (failsChecks(p, deathLoc, skill)) continue;
+
+            User user = plugin.getUser(p);
+            double baseAmount = getSpawnerMultiplier(entity, skill) * getLevelledMobsMultiplier(entity) * source.getXp();
+            double finalAmount = baseAmount * ratio;
+
+            plugin.getLevelManager().addEntityXp(user, skill, source, finalAmount, entity, p, event);
+        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR)

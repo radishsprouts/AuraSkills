@@ -1,5 +1,6 @@
 package dev.aurelium.auraskills.bukkit.source;
 
+import dev.aurelium.auraskills.api.source.type.EntityXpSource;
 import dev.aurelium.auraskills.bukkit.AuraSkills;
 import dev.aurelium.auraskills.paper.util.PaperUtil;
 import dev.aurelium.auraskills.bukkit.util.AttributeCompat;
@@ -55,6 +56,16 @@ public class MobCombatTracker implements Listener {
 
     public void markTrapKill(LivingEntity entity) {
         entity.getPersistentDataContainer().set(trapKillKey, PersistentDataType.INTEGER, 1);
+    }
+
+    @Nullable
+    public CombatRecord getCombatRecord(UUID entityId) {
+        return combatRecords.get(entityId);
+    }
+
+    @Nullable
+    public CombatRecord removeCombatRecord(UUID entityId) {
+        return combatRecords.remove(entityId);
     }
 
     /**
@@ -137,10 +148,6 @@ public class MobCombatTracker implements Listener {
             return;
         }
 
-        if (!plugin.configBoolean(Option.SOURCE_ENTITY_TRAP_PROTECTION_ENABLED)) {
-            return;
-        }
-
         double damage = event.getFinalDamage();
         if (damage <= 0.0) return;
 
@@ -155,14 +162,20 @@ public class MobCombatTracker implements Listener {
         }
 
         Player playerDamager = null;
+        EntityXpSource.EntityDamagers damagerType = EntityXpSource.EntityDamagers.PLAYER;
         if (event instanceof EntityDamageByEntityEvent byEntityEvent) {
             playerDamager = resolvePlayerDamager(byEntityEvent.getDamager());
+            if (byEntityEvent.getDamager() instanceof Projectile) {
+                damagerType = EntityXpSource.EntityDamagers.PROJECTILE;
+            }
         }
 
         if (playerDamager != null) {
-            boolean isLegit = isLegitAttack(entity, playerDamager, event);
+            boolean isLegit = !plugin.configBoolean(Option.SOURCE_ENTITY_TRAP_PROTECTION_ENABLED)
+                    || isLegitAttack(entity, playerDamager, event);
             if (isLegit) {
                 record.addLegitDamage(damage);
+                record.recordPlayerDamage(playerDamager.getUniqueId(), damage, damagerType);
             } else {
                 record.addIllegalDamage(damage);
             }
@@ -181,7 +194,6 @@ public class MobCombatTracker implements Listener {
         }
 
         if (!plugin.configBoolean(Option.SOURCE_ENTITY_TRAP_PROTECTION_ENABLED)) {
-            combatRecords.remove(entity.getUniqueId());
             return;
         }
 
@@ -198,7 +210,7 @@ public class MobCombatTracker implements Listener {
         }
 
         // 3. Check combat record damage ratio
-        CombatRecord record = combatRecords.remove(entity.getUniqueId());
+        CombatRecord record = combatRecords.get(entity.getUniqueId());
         if (!isTrap && record != null) {
             if (record.isTainted()) {
                 isTrap = true;
@@ -456,8 +468,25 @@ public class MobCombatTracker implements Listener {
         private double nonPlayerDamage = 0.0;
         private boolean tainted = false;
 
+        // Player damage contribution tracking
+        private final Map<UUID, Double> playerDamages = new ConcurrentHashMap<>();
+        private final Map<UUID, EntityXpSource.EntityDamagers> playerDamagerTypes = new ConcurrentHashMap<>();
+
         public CombatRecord(LivingEntity entity) {
             this.entityId = entity.getUniqueId();
+        }
+
+        public void recordPlayerDamage(UUID playerId, double amount, EntityXpSource.EntityDamagers damagerType) {
+            this.playerDamages.merge(playerId, amount, Double::sum);
+            this.playerDamagerTypes.put(playerId, damagerType);
+        }
+
+        public Map<UUID, Double> getPlayerDamages() {
+            return playerDamages;
+        }
+
+        public EntityXpSource.EntityDamagers getPlayerDamagerType(UUID playerId) {
+            return playerDamagerTypes.getOrDefault(playerId, EntityXpSource.EntityDamagers.PLAYER);
         }
 
         public void addTotalDamage(double amount) {
