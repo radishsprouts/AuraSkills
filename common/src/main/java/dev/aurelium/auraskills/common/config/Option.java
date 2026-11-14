@@ -106,6 +106,7 @@ public enum Option {
     DATA_VALIDATION_CORRECT_OVER_MAX_LEVEL("data_validation.correct_over_max_level", OptionType.BOOLEAN),
     LEADERBOARDS_UPDATE_PERIOD("leaderboards.update_period", OptionType.INT),
     LEADERBOARDS_UPDATE_DELAY("leaderboards.update_delay", OptionType.INT),
+    LEADERBOARDS_NAME_FORMAT("leaderboards.name_format", OptionType.STRING),
     ENABLE_SKILL_COMMANDS("enable_skill_commands", OptionType.BOOLEAN),
     CHECK_BLOCK_REPLACE_ENABLED("check_block_replace.enabled", OptionType.BOOLEAN),
     DISABLE_IN_CREATIVE_MODE("disable_in_creative_mode", OptionType.BOOLEAN),

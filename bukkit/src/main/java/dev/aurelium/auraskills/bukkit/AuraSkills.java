@@ -101,6 +101,7 @@ import dev.aurelium.slate.scheduler.Scheduler;
 import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.PluginManager;
@@ -113,6 +114,7 @@ import org.spongepowered.configurate.ConfigurationNode;
 import java.io.File;
 import java.io.InputStream;
 import java.util.Locale;
+import java.util.UUID;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -615,6 +617,29 @@ public class AuraSkills extends JavaPlugin implements AuraSkillsPlugin {
     @Override
     public LeaderboardManager getLeaderboardManager() {
         return leaderboardManager;
+    }
+
+    public String formatLeaderboardPlayerName(UUID uuid) {
+        OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(uuid);
+        String vanillaName = offlinePlayer.getName();
+        if (vanillaName == null) {
+            vanillaName = "?";
+        }
+
+        String format = configProvider.getString(Option.LEADERBOARDS_NAME_FORMAT);
+        if (format == null || format.isEmpty()) {
+            format = "%player_name%";
+        }
+
+        dev.aurelium.auraskills.bukkit.hooks.PlaceholderApiHook hook = hookManager.getHook(dev.aurelium.auraskills.bukkit.hooks.PlaceholderApiHook.class);
+        if (hook != null) {
+            try {
+                return hook.setPlaceholders(offlinePlayer, format);
+            } catch (Throwable ignored) {
+            }
+        }
+
+        return format.replace("%player_name%", vanillaName).replace("{player}", vanillaName);
     }
 
     @Override

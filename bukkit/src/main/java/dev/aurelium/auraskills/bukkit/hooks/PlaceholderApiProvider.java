@@ -416,8 +416,7 @@ public class PlaceholderApiProvider extends PlaceholderExpansion {
                         List<SkillValue> list = plugin.getLeaderboardManager().getPowerLeaderboard(namePlace, 1);
                         if (!list.isEmpty()) {
                             SkillValue skillValue = list.get(0);
-                            String name = Bukkit.getOfflinePlayer(skillValue.id()).getName();
-                            return name != null ? name : "?";
+                            return plugin.formatLeaderboardPlayerName(skillValue.id());
                         } else return "";
                     }
                 } else if (identifier.endsWith("value")) {
@@ -451,8 +450,7 @@ public class PlaceholderApiProvider extends PlaceholderExpansion {
                             List<SkillValue> list = plugin.getLeaderboardManager().getLeaderboard(skill, namePlace, 1);
                             if (!list.isEmpty()) {
                                 SkillValue skillValue = list.get(0);
-                                String name = Bukkit.getOfflinePlayer(skillValue.id()).getName();
-                                return name != null ? name : "?";
+                                return plugin.formatLeaderboardPlayerName(skillValue.id());
                             } else return "";
                         }
                     } else if (identifier.endsWith("value")) {

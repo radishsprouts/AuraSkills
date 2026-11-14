@@ -6,6 +6,7 @@ import dev.aurelium.auraskills.common.hooks.Hook;
 import dev.aurelium.auraskills.common.hooks.PlaceholderHook;
 import dev.aurelium.auraskills.common.user.User;
 import me.clip.placeholderapi.PlaceholderAPI;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.spongepowered.configurate.ConfigurationNode;
 
@@ -32,6 +33,17 @@ public class PlaceholderApiHook extends PlaceholderHook {
             return PlaceholderAPI.setPlaceholders(player, message);
         } else {
             return message;
+        }
+    }
+
+    public String setPlaceholders(OfflinePlayer player, String message) {
+        if (player == null) {
+            return message;
+        }
+        if (player.isOnline() && player.getPlayer() != null) {
+            return PlaceholderAPI.setPlaceholders(player.getPlayer(), message);
+        } else {
+            return PlaceholderAPI.setPlaceholders(player, message);
         }
     }
 

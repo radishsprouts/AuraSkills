@@ -1,8 +1,10 @@
 package dev.aurelium.auraskills.bukkit.menus.shared;
 
 import dev.aurelium.auraskills.api.ability.Ability;
+import dev.aurelium.auraskills.api.util.NumberUtil;
 import dev.aurelium.auraskills.bukkit.AuraSkills;
 import dev.aurelium.auraskills.common.user.User;
+import dev.aurelium.auraskills.common.util.text.TextUtil;
 import dev.aurelium.slate.builder.MenuBuilder;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -48,9 +50,17 @@ public class EquippedAbilitiesItem {
                         lore.add("§7スキル: §b" + ability.getSkill().getDisplayName(user.getLocale(), false));
                         lore.add("");
 
+                        int level = Math.max(1, user.getAbilityLevel(ability));
                         String desc = plugin.getAbilityManager().getBaseDescription(ability, user, false);
                         if (desc != null) {
-                            lore.add("§7" + desc);
+                            desc = TextUtil.replace(desc,
+                                    "{value}", NumberUtil.format1(ability.getValue(level)),
+                                    "{value_2}", NumberUtil.format1(ability.getSecondaryValue(level)),
+                                    "{chance_value}", plugin.getAbilityManager().getChanceValue(ability, level),
+                                    "{guaranteed_value}", plugin.getAbilityManager().getGuaranteedValue(ability, level));
+                            for (String line : desc.split("\n")) {
+                                lore.add("§7" + line);
+                            }
                         }
                         lore.add("");
                         lore.add("§e[セット中] クリックで解除");

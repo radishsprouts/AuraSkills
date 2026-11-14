@@ -41,8 +41,8 @@ public class LeaderboardMenu {
             template.replace("place", p -> String.valueOf(p.value()));
             template.replace("player", p -> {
                 SkillValue value = lb.getSkillValue((Skill) p.menu().getProperty("skill"), p.value());
-                String name = Bukkit.getOfflinePlayer(value != null ? value.id() : UUID.randomUUID()).getName();
-                return name != null ? name : "?";
+                if (value == null) return "?";
+                return plugin.formatLeaderboardPlayerName(value.id());
             });
             template.replace("level", p -> {
                 SkillValue value = lb.getSkillValue((Skill) p.menu().getProperty("skill"), p.value());

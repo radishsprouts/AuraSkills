@@ -76,10 +76,10 @@ public class SkillsRootCommand extends BaseCommand {
             List<SkillValue> lb = plugin.getLeaderboardManager().getPowerLeaderboard(1, 10);
             sender.sendMessage(plugin.getMsg(CommandMessage.TOP_POWER_HEADER, locale));
             for (SkillValue skillValue : lb) {
-                String name = Bukkit.getOfflinePlayer(skillValue.id()).getName();
+                String name = plugin.formatLeaderboardPlayerName(skillValue.id());
                 sender.sendMessage(plugin.getMsg(CommandMessage.TOP_POWER_ENTRY, locale)
                         .replace("{rank}", String.valueOf(lb.indexOf(skillValue) + 1))
-                        .replace("{player}", name != null ? name : "?")
+                        .replace("{player}", name)
                         .replace("{level}", String.valueOf(skillValue.level())));
             }
         } else if (args.length == 1) {
@@ -93,10 +93,10 @@ public class SkillsRootCommand extends BaseCommand {
                     List<SkillValue> lb = plugin.getLeaderboardManager().getPowerLeaderboard(page, 10);
                     sender.sendMessage(plugin.getMsg(CommandMessage.TOP_POWER_HEADER_PAGE, locale).replace("{page}", String.valueOf(page)));
                     for (SkillValue skillValue : lb) {
-                        String name = Bukkit.getOfflinePlayer(skillValue.id()).getName();
+                        String name = plugin.formatLeaderboardPlayerName(skillValue.id());
                         sender.sendMessage(plugin.getMsg(CommandMessage.TOP_POWER_ENTRY, locale)
                                 .replace("{rank}", String.valueOf((page - 1) * 10 + lb.indexOf(skillValue) + 1))
-                                .replace("{player}", name != null ? name : "?")
+                                .replace("{player}", name)
                                 .replace("{level}", String.valueOf(skillValue.level())));
                     }
                 } catch (Exception e) {
@@ -109,10 +109,10 @@ public class SkillsRootCommand extends BaseCommand {
                         List<SkillValue> lb = plugin.getLeaderboardManager().getLeaderboard(skill, 1, 10);
                         sender.sendMessage(plugin.getMsg(CommandMessage.TOP_SKILL_HEADER, locale).replace("{skill}", skill.getDisplayName(locale)));
                         for (SkillValue skillValue : lb) {
-                            String name = Bukkit.getOfflinePlayer(skillValue.id()).getName();
+                            String name = plugin.formatLeaderboardPlayerName(skillValue.id());
                             sender.sendMessage(plugin.getMsg(CommandMessage.TOP_SKILL_ENTRY, locale)
                                     .replace("{rank}", String.valueOf(lb.indexOf(skillValue) + 1))
-                                    .replace("{player}", name != null ? name : "?")
+                                    .replace("{player}", name)
                                     .replace("{level}", String.valueOf(skillValue.level())));
                         }
                     } else {
@@ -139,10 +139,10 @@ public class SkillsRootCommand extends BaseCommand {
                         List<SkillValue> lb = plugin.getLeaderboardManager().getLeaderboard(skill, page, 10);
                         sender.sendMessage(plugin.getMsg(CommandMessage.TOP_SKILL_HEADER_PAGE, locale).replace("{page}", String.valueOf(page)).replace("{skill}", skill.getDisplayName(locale)));
                         for (SkillValue skillValue : lb) {
-                            String name = Bukkit.getOfflinePlayer(skillValue.id()).getName();
+                            String name = plugin.formatLeaderboardPlayerName(skillValue.id());
                             sender.sendMessage(plugin.getMsg(CommandMessage.TOP_SKILL_ENTRY, locale)
                                     .replace("{rank}", String.valueOf((page - 1) * 10 + lb.indexOf(skillValue) + 1))
-                                    .replace("{player}", name != null ? name : "?")
+                                    .replace("{player}", name)
                                     .replace("{level}", String.valueOf(skillValue.level())));
                         }
                     } catch (Exception e) {
@@ -157,10 +157,10 @@ public class SkillsRootCommand extends BaseCommand {
 
     private void sendLeaderboardEntries(CommandSender sender, Locale locale, List<SkillValue> lb) {
         for (SkillValue skillValue : lb) {
-            String name = Bukkit.getOfflinePlayer(skillValue.id()).getName();
+            String name = plugin.formatLeaderboardPlayerName(skillValue.id());
             sender.sendMessage(TextUtil.replace(plugin.getMsg(CommandMessage.TOP_AVERAGE_ENTRY, locale),
                     "{rank}", String.valueOf(lb.indexOf(skillValue) + 1),
-                    "{player}", name != null ? name : "?",
+                    "{player}", name,
                     "{level}", NumberUtil.format2(skillValue.xp())));
         }
     }

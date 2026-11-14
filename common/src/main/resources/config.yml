@@ -186,6 +186,9 @@ damage_holograms:
 leaderboards:
   update_period: 6000
   update_delay: 6000
+  # Format for player names in leaderboards (GUI and chat).
+  # Supports PlaceholderAPI placeholders (e.g. "%player_displayname%", "%luckperms_prefix%%player_name%")
+  name_format: "%player_name%"
 start_level: 0
 enable_skill_commands: true
 check_block_replace:
