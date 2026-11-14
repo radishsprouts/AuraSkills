@@ -31,9 +31,9 @@ public class LevelledMobsHook extends Hook {
 
     private void loadConfig() {
         ConfigurationNode config = getConfig();
-        this.xpMultiplier = config.node("xp_multiplier").getDouble(0.1);
+        this.xpMultiplier = config.node("xp_multiplier").getDouble(0.05);
         this.expressionString = config.node("expression").getString("1 + (level - 1) * xp_multiplier");
-        this.maxMultiplier = config.node("max_multiplier").getDouble(0.0);
+        this.maxMultiplier = config.node("max_multiplier").getDouble(10.0);
         this.respectChunkKillMax = config.node("respect_chunk_kill_max").getBoolean(true);
     }
 

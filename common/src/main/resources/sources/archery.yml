@@ -95,7 +95,7 @@ sources:
   drowned:
     xp: 7.0
   elder_guardian:
-    xp: 100.0
+    xp: 50.0
   endermite:
     xp: 5.0
   evoker:
@@ -121,7 +121,7 @@ sources:
   pillager:
     xp: 10.0
   ravager:
-    xp: 100.0
+    xp: 50.0
   shulker:
     xp: 15.0
   silverfish:
@@ -147,9 +147,9 @@ sources:
   zombie_villager:
     xp: 7.0
   ender_dragon:
-    xp: 7000.0
+    xp: 300.0
   wither:
-    xp: 7000.0
+    xp: 300.0
   axolotl:
     xp: 3.5
   glow_squid:
@@ -163,7 +163,7 @@ sources:
   tadpole:
     xp: 1.2
   warden:
-    xp: 1000.0
+    xp: 200.0
   armadillo:
     xp: 3.0
   bogged:

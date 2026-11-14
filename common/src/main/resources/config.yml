@@ -64,9 +64,9 @@ hooks:
     enabled: true
   LevelledMobs:
     enabled: true
-    xp_multiplier: 0.1
+    xp_multiplier: 0.05
     expression: '1 + (level - 1) * xp_multiplier'
-    max_multiplier: 0.0
+    max_multiplier: 10.0
     respect_chunk_kill_max: true
 action_bar:
   enabled: true
