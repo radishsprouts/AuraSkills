@@ -10,6 +10,7 @@ import dev.aurelium.auraskills.api.source.type.EntityXpSource.EntityTriggers;
 import dev.aurelium.auraskills.bukkit.AuraSkills;
 import dev.aurelium.auraskills.bukkit.hooks.LevelledMobsHook;
 import dev.aurelium.auraskills.bukkit.hooks.mythicmobs.MythicMobsHook;
+import dev.aurelium.auraskills.bukkit.level.BukkitLevelManager;
 import dev.aurelium.auraskills.bukkit.skills.fighting.FightingAbilities;
 import dev.aurelium.auraskills.bukkit.util.AttributeCompat;
 import dev.aurelium.auraskills.common.config.Option;
@@ -37,11 +38,13 @@ public class EntityLeveler extends SourceLeveler {
 
     private final NamespacedKey spawnerMobKey;
     private final NamespacedKey roseStackerSpawner;
+    private final NamespacedKey chunkKillMaxKey;
 
     public EntityLeveler(AuraSkills plugin) {
         super(plugin, SourceTypes.ENTITY);
         this.spawnerMobKey = new NamespacedKey(plugin, "is_spawner_mob");
         this.roseStackerSpawner = NamespacedKey.fromString("rosestacker:spawner_spawned");
+        this.chunkKillMaxKey = new NamespacedKey("levelledmobs", "chunk_kill_max_reached");
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -50,6 +53,16 @@ public class EntityLeveler extends SourceLeveler {
         LivingEntity entity = event.getEntity();
 
         if (preventMythicXp(entity)) return;
+
+        MobCombatTracker tracker = ((BukkitLevelManager) plugin.getLevelManager()).getMobCombatTracker();
+        if (tracker != null && tracker.isTrapKill(entity)) {
+            return;
+        }
+
+        // Prevent XP if LevelledMobs chunk kill max was reached
+        if (entity.getPersistentDataContainer().has(chunkKillMaxKey, PersistentDataType.INTEGER)) {
+            return;
+        }
 
         // Ensure that the entity has a killer
         @Nullable
@@ -100,12 +113,24 @@ public class EntityLeveler extends SourceLeveler {
 
         if (preventMythicXp(entity)) return;
 
+        MobCombatTracker tracker = ((BukkitLevelManager) plugin.getLevelManager()).getMobCombatTracker();
+        if (tracker != null && tracker.isCombatMob(entity)) {
+            if (tracker.isTrapKill(entity)) return;
+        }
+
         // Get the player who damaged the entity and the damager type
         Pair<Player, EntityXpSource.EntityDamagers> damagerPair = resolveDamager(event.getDamager(), event.getCause());
         if (damagerPair == null) return;
 
         Player player = damagerPair.first();
         if (player.hasMetadata("NPC")) return;
+
+        if (tracker != null && tracker.isCombatMob(entity)) {
+            if (!tracker.isLegitAttack(entity, player, event)) {
+                return;
+            }
+        }
+
         User user = plugin.getUser(player);
         EntityXpSource.EntityDamagers damager = damagerPair.second();
 
@@ -131,6 +156,11 @@ public class EntityLeveler extends SourceLeveler {
         }
 
         if (preventMythicXp(entity)) return;
+
+        MobCombatTracker tracker = ((BukkitLevelManager) plugin.getLevelManager()).getMobCombatTracker();
+        if (tracker != null && tracker.isCombatMob(entity) && tracker.isTrapKill(entity)) {
+            return;
+        }
 
         Player player = getBleedDamager(entity);
         if (player == null) return; // Was not damaged by Bleed

@@ -276,6 +276,16 @@ source:
     gain_period_ticks: 12000
   entity:
     give_alchemy_on_potion_combat: false
+    trap_protection:
+      enabled: true
+      min_legit_damage_ratio: 0.70
+      max_crammed_entities: 5
+      prevent_vanilla_xp: true
+      prevent_vehicle_cheese: true
+      prevent_los_cheese: true
+      prevent_path_cheese: true
+      stationary_kill_limit: 10
+      stationary_kill_radius: 8.0
 commands:
   mana:
     enabled: true

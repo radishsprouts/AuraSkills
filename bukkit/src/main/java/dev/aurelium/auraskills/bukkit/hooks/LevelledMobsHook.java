@@ -50,9 +50,9 @@ public class LevelledMobsHook extends Hook {
 
         PersistentDataContainer pdc = entity.getPersistentDataContainer();
 
-        // If chunk kill max was reached and respect is enabled, don't multiply XP
+        // If chunk kill max was reached and respect is enabled, give 0 XP to prevent farm abuse
         if (respectChunkKillMax && pdc.has(chunkKillMaxKey, PersistentDataType.INTEGER)) {
-            return 1.0;
+            return 0.0;
         }
 
         if (!pdc.has(levelKey, PersistentDataType.INTEGER)) {

@@ -28,11 +28,17 @@ public class BukkitLevelManager extends LevelManager {
 
     private final AuraSkills plugin;
     private final Set<SourceLeveler> levelers;
+    private final MobCombatTracker mobCombatTracker;
 
     public BukkitLevelManager(AuraSkills plugin) {
         super(plugin);
         this.plugin = plugin;
         this.levelers = Sets.newConcurrentHashSet();
+        this.mobCombatTracker = new MobCombatTracker(plugin);
+    }
+
+    public MobCombatTracker getMobCombatTracker() {
+        return mobCombatTracker;
     }
 
     public void loadXpRequirements() {
@@ -42,6 +48,7 @@ public class BukkitLevelManager extends LevelManager {
 
     public void registerLevelers() {
         levelers.clear();
+        Bukkit.getPluginManager().registerEvents(mobCombatTracker, plugin);
         registerLeveler(new AnvilLeveler(plugin));
         registerLeveler(new BlockLeveler(plugin));
         registerLeveler(new BrewingLeveler(plugin));

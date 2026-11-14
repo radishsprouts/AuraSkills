@@ -6,6 +6,7 @@ import dev.aurelium.auraskills.api.source.SkillSource;
 import dev.aurelium.auraskills.api.source.type.DamageXpSource;
 import dev.aurelium.auraskills.api.source.type.DamageXpSource.DamageCause;
 import dev.aurelium.auraskills.bukkit.AuraSkills;
+import dev.aurelium.auraskills.bukkit.level.BukkitLevelManager;
 import dev.aurelium.auraskills.common.source.SourceTypes;
 import dev.aurelium.auraskills.common.user.User;
 import org.bukkit.entity.*;
@@ -54,6 +55,16 @@ public class DamageLeveler extends SourceLeveler {
         // Disregard self inflected damage
         if (event instanceof EntityDamageByEntityEvent entityEvent) {
             if (isSelfInflicted(entityEvent.getDamager(), player)) return;
+
+            // Trap check for defense XP: ignore if damager mob is trapped/crammed or player is cheese-farming
+            if (entityEvent.getDamager() instanceof LivingEntity damagerLiving) {
+                MobCombatTracker tracker = ((BukkitLevelManager) plugin.getLevelManager()).getMobCombatTracker();
+                if (tracker != null && tracker.isCombatMob(damagerLiving)) {
+                    if (tracker.isTrapKill(damagerLiving) || !tracker.isLegitAttack(damagerLiving, player, event)) {
+                        return;
+                    }
+                }
+            }
         }
 
         if (failsChecks(event, player, player.getLocation(), skill)) return;
