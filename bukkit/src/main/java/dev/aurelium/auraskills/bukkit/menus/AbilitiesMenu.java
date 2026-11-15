@@ -182,10 +182,13 @@ public class AbilitiesMenu {
             component.replace("desc", p -> {
                 User user = plugin.getUser(p.player());
                 if (p.value() instanceof Ability ability) {
+                    int level = user.getAbilityLevel(ability);
                     String desc = plugin.getAbilityManager().getBaseDescription(ability, user, false);
                     return TextUtil.replace(desc,
-                            "{value}", NumberUtil.format1(ability.getValue(user.getAbilityLevel(ability))),
-                            "{value_2}", NumberUtil.format1(ability.getSecondaryValue(user.getAbilityLevel(ability))));
+                            "{value}", NumberUtil.format1(ability.getValue(level)),
+                            "{value_2}", NumberUtil.format1(ability.getSecondaryValue(level)),
+                            "{chance_value}", plugin.getAbilityManager().getChanceValue(ability, level),
+                            "{guaranteed_value}", plugin.getAbilityManager().getGuaranteedValue(ability, level));
                 }
                 return null;
             });
