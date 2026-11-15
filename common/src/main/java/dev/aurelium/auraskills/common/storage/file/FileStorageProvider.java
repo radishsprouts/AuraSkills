@@ -18,6 +18,7 @@ import dev.aurelium.auraskills.common.ref.PlayerRef;
 import dev.aurelium.auraskills.common.region.BlockPosition;
 import dev.aurelium.auraskills.common.storage.StorageProvider;
 import dev.aurelium.auraskills.common.ui.ActionBarType;
+import dev.aurelium.auraskills.common.user.AbilityPreset;
 import dev.aurelium.auraskills.common.user.AntiAfkLog;
 import dev.aurelium.auraskills.common.user.SkillLevelMaps;
 import dev.aurelium.auraskills.common.user.User;
@@ -125,6 +126,29 @@ public class FileStorageProvider extends StorageProvider {
                 }
             }
             user.setEquippedAbilitiesFromStorage(list);
+        }
+
+        // Load ability presets
+        ConfigurationNode presetsNode = root.node("ability_presets");
+        if (!presetsNode.virtual()) {
+            for (int i = 0; i < AbilityPreset.MAX_PRESETS; i++) {
+                ConfigurationNode pNode = presetsNode.node(String.valueOf(i));
+                if (pNode.virtual()) continue;
+                AbilityPreset preset = user.getPreset(i);
+                String name = pNode.node("name").getString();
+                if (name != null) preset.setName(name);
+                String icon = pNode.node("icon").getString();
+                if (icon != null) preset.setIconMaterial(icon);
+                List<String> abList = pNode.node("abilities").getList(String.class);
+                if (abList != null) {
+                    List<Ability> parsed = new ArrayList<>();
+                    for (String str : abList) {
+                        Ability ab = plugin.getAbilityRegistry().getOrNull(NamespacedId.fromString(str));
+                        if (ab != null) parsed.add(ab);
+                    }
+                    preset.setAbilities(parsed);
+                }
+            }
         }
 
         return user;
@@ -425,6 +449,21 @@ public class FileStorageProvider extends StorageProvider {
                 abilityNames.add(ability.getId().toString());
             }
             root.node("equipped_abilities").set(abilityNames);
+        }
+
+        // Save ability presets
+        root.removeChild("ability_presets");
+        for (int i = 0; i < AbilityPreset.MAX_PRESETS; i++) {
+            AbilityPreset preset = user.getPreset(i);
+            if (preset.isDefaultAndEmpty()) continue;
+            ConfigurationNode pNode = root.node("ability_presets", String.valueOf(i));
+            pNode.node("name").set(preset.getName());
+            pNode.node("icon").set(preset.getIconMaterial());
+            List<String> abNames = new ArrayList<>();
+            for (Ability ab : preset.getAbilities()) {
+                abNames.add(ab.getId().toString());
+            }
+            pNode.node("abilities").set(abNames);
         }
 
         // Save anti-AFK logs

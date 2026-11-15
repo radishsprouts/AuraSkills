@@ -9,6 +9,10 @@ public enum MenuFileUpdates {
 
     SKILLS_1("skills", 1, Map.of(
             "components", List.of("skill_job_active"))),
+    SKILLS_2("skills", 2, Map.of(
+            "items", List.of("preset_manager", "preset_slot_1", "preset_slot_2", "preset_slot_3", "preset_slot_4", "preset_slot_5"))),
+    ABILITIES_1("abilities", 1, Map.of(
+            "items", List.of("preset_manager", "preset_slot_1", "preset_slot_2", "preset_slot_3", "preset_slot_4", "preset_slot_5"))),
     LEVEL_PROGRESSION_1("level_progression", 1, Map.of(
             "items", List.of("job"),
             "components", List.of("job_select", "job_active", "job_limit"))),

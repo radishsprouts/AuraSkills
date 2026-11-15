@@ -1,0 +1,89 @@
+title: 'パッシブ一括編成 - #{preset_num} {preset_name} ({current_page}/{total_pages})'
+size: 6
+fill:
+  enabled: true
+  material: black_stained_glass_pane
+items:
+  back:
+    pos: 0,0
+    material: arrow
+    display_name: '<green>戻る'
+    lore:
+      - '<gray>前の画面に戻ります'
+  rename_preset:
+    pos: 0,1
+    material: name_tag
+    display_name: '<yellow>プリセット名の変更'
+    lore:
+      - '<gray>金床でプリセット名を変更します'
+  change_icon:
+    pos: 0,2
+    material: diamond_sword
+    display_name: '<aqua>アイコンの変更'
+    lore:
+      - '<gray>クリックしてアイコンを切り替えます'
+  equipped_slot_1:
+    pos: 0,3
+    material: gray_dye
+    display_name: '<yellow>装備スロット #1'
+  equipped_slot_2:
+    pos: 0,4
+    material: gray_dye
+    display_name: '<yellow>装備スロット #2'
+  equipped_slot_3:
+    pos: 0,5
+    material: gray_dye
+    display_name: '<yellow>装備スロット #3'
+  category_filter:
+    pos: 0,6
+    material: hopper
+    display_name: '<green>カテゴリ絞り込み'
+    lore:
+      - '<gray>クリックして系統を切り替えます'
+  clear_equipped:
+    pos: 0,7
+    material: milk_bucket
+    display_name: '<red>全解除'
+    lore:
+      - '<gray>装備中のスキルをすべて外します'
+  close:
+    pos: 0,8
+    material: barrier
+    display_name: '<red>閉じる'
+  preset_slot_1:
+    pos: 4,2
+    material: diamond_sword
+    display_name: '<aqua>プリセット #1'
+  preset_slot_2:
+    pos: 4,3
+    material: golden_hoe
+    display_name: '<aqua>プリセット #2'
+  preset_slot_3:
+    pos: 4,4
+    material: iron_pickaxe
+    display_name: '<aqua>プリセット #3'
+  preset_slot_4:
+    pos: 4,5
+    material: iron_axe
+    display_name: '<aqua>プリセット #4'
+  preset_slot_5:
+    pos: 4,6
+    material: nether_star
+    display_name: '<aqua>プリセット #5'
+  previous_page:
+    pos: 5,3
+    material: arrow
+    display_name: '<gold>前のページ'
+    lore:
+      - '<yellow>クリックして前のページへ'
+  next_page:
+    pos: 5,5
+    material: arrow
+    display_name: '<gold>次のページ'
+    lore:
+      - '<yellow>クリックして次のページへ'
+templates:
+  passive_ability:
+    material: book
+    display_name: '<white>{name}'
+file_version: 1

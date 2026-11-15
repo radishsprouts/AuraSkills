@@ -22,6 +22,35 @@ items:
     pos: 0,5
     material: gray_dye
     display_name: '<yellow>装備スロット #3'
+  preset_manager:
+    pos: 0,6
+    material: nether_star
+    display_name: '<gold><bold>パッシブ一括編成・プリセット管理'
+    lore:
+      - '<gray>全スキルの解放済みパッシブを1画面で'
+      - '<gray>確認・一括編成し、プリセットとして保存できます。'
+      - ' '
+      - '<yellow>▶ クリックして開く'
+  preset_slot_1:
+    pos: 4,2
+    material: diamond_sword
+    display_name: '<aqua>プリセット #1'
+  preset_slot_2:
+    pos: 4,3
+    material: golden_hoe
+    display_name: '<aqua>プリセット #2'
+  preset_slot_3:
+    pos: 4,4
+    material: iron_pickaxe
+    display_name: '<aqua>プリセット #3'
+  preset_slot_4:
+    pos: 4,5
+    material: iron_axe
+    display_name: '<aqua>プリセット #4'
+  preset_slot_5:
+    pos: 4,6
+    material: nether_star
+    display_name: '<aqua>プリセット #5'
 templates:
   locked_ability:
     material: gray_dye
@@ -110,3 +139,4 @@ components:
           1: '<yellow>'
 formats:
   desc_upgrade_value: '<gray>{current}<dark_gray>→{next}<gray>'
+file_version: 1

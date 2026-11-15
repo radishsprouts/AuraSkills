@@ -53,6 +53,7 @@ public class MenuRegistrar {
         buildMenu("leaderboard", menu -> new LeaderboardMenu(plugin).build(menu));
         buildMenu("sources", menu -> new SourcesMenu(plugin).build(menu));
         buildMenu("abilities", menu -> new AbilitiesMenu(plugin).build(menu));
+        buildMenu("presets", menu -> new PresetsMenu(plugin).build(menu));
         buildMenu("stat_info", menu -> new StatInfoMenu(plugin).build(menu));
 
         for (String nonDefault : ((ApiMenuManager) plugin.getApiBukkit().getMenuManager()).getNonDefaultMenuNames()) {

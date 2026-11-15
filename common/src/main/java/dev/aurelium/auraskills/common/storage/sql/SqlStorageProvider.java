@@ -20,6 +20,7 @@ import dev.aurelium.auraskills.common.storage.StorageProvider;
 import dev.aurelium.auraskills.common.storage.sql.migration.SqlMigrator;
 import dev.aurelium.auraskills.common.storage.sql.pool.ConnectionPool;
 import dev.aurelium.auraskills.common.ui.ActionBarType;
+import dev.aurelium.auraskills.common.user.AbilityPreset;
 import dev.aurelium.auraskills.common.user.AntiAfkLog;
 import dev.aurelium.auraskills.common.user.SkillLevelMaps;
 import dev.aurelium.auraskills.common.user.User;
@@ -599,13 +600,21 @@ public class SqlStorageProvider extends StorageProvider {
 
     private List<KeyValueRow> getEquippedAbilitiesRow(User user) {
         List<KeyValueRow> rows = new ArrayList<>();
-        if (user.getEquippedAbilities().isEmpty()) {
-            return rows;
+        if (!user.getEquippedAbilities().isEmpty()) {
+            String abilityCommaList = String.join(",", user.getEquippedAbilities().stream().map(a -> a.getId().toString()).toList());
+            var equippedRow = new KeyValueRow(EQUIPPED_ABILITIES_ID, null, "equipped", abilityCommaList);
+            rows.add(equippedRow);
         }
 
-        String abilityCommaList = String.join(",", user.getEquippedAbilities().stream().map(a -> a.getId().toString()).toList());
-        var equippedRow = new KeyValueRow(EQUIPPED_ABILITIES_ID, null, "equipped", abilityCommaList);
-        rows.add(equippedRow);
+        for (int i = 0; i < AbilityPreset.MAX_PRESETS; i++) {
+            AbilityPreset preset = user.getPreset(i);
+            if (preset.isDefaultAndEmpty()) continue;
+            String abList = String.join(",", preset.getAbilities().stream().map(a -> a.getId().toString()).toList());
+            String encoded = preset.getName() + "|" + preset.getIconMaterial() + "|" + abList;
+            var presetRow = new KeyValueRow(EQUIPPED_ABILITIES_ID, null, "preset_" + i, encoded);
+            rows.add(presetRow);
+        }
+
         return rows;
     }
 

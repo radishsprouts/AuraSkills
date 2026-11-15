@@ -3,6 +3,7 @@ package dev.aurelium.auraskills.bukkit.menus.shared;
 import dev.aurelium.auraskills.api.ability.Ability;
 import dev.aurelium.auraskills.api.util.NumberUtil;
 import dev.aurelium.auraskills.bukkit.AuraSkills;
+import dev.aurelium.auraskills.common.user.AbilityPreset;
 import dev.aurelium.auraskills.common.user.User;
 import dev.aurelium.auraskills.common.util.text.TextUtil;
 import dev.aurelium.slate.builder.MenuBuilder;
@@ -28,6 +29,12 @@ public class EquippedAbilitiesItem {
     }
 
     public void register(MenuBuilder menu, String menuName) {
+        registerEquippedSlots(menu, menuName);
+        registerPresetManagerButton(menu);
+        registerPresetSlots(menu, menuName);
+    }
+
+    private void registerEquippedSlots(MenuBuilder menu, String menuName) {
         for (int i = 0; i < 3; i++) {
             final int slotIndex = i;
             String itemName = "equipped_slot_" + (slotIndex + 1);
@@ -105,4 +112,147 @@ public class EquippedAbilitiesItem {
         }
     }
 
+    private void registerPresetManagerButton(MenuBuilder menu) {
+        menu.item("preset_manager", item -> {
+            item.modify(info -> {
+                ItemStack is = info.item();
+                if (is.getType() == Material.AIR) {
+                    is.setType(Material.NETHER_STAR);
+                }
+                ItemMeta meta = is.getItemMeta();
+                if (meta == null) return is;
+                meta.setDisplayName("§6§lパッシブ一括編成・プリセット管理");
+                List<String> lore = new ArrayList<>();
+                lore.add("§7全スキルの解放済みパッシブを1画面で");
+                lore.add("§7確認・一括編成し、プリセットとして保存できます。");
+                lore.add("");
+                lore.add("§e▶ クリックして開く");
+                meta.setLore(lore);
+                is.setItemMeta(meta);
+                return is;
+            });
+
+            item.onClick(c -> {
+                Player player = c.player();
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 0.7f, 1.0f);
+                plugin.getSlate().openMenu(player, "presets");
+            });
+        });
+    }
+
+    private void registerPresetSlots(MenuBuilder menu, String menuName) {
+        for (int i = 0; i < AbilityPreset.MAX_PRESETS; i++) {
+            final int presetIndex = i;
+            String itemName = "preset_slot_" + (presetIndex + 1);
+            menu.item(itemName, item -> {
+                item.modify(info -> {
+                    Player player = info.player();
+                    User user = plugin.getUser(player);
+                    AbilityPreset preset = user.getPreset(presetIndex);
+
+                    ItemStack is = info.item();
+                    Material mat = Material.matchMaterial(preset.getIconMaterial());
+                    if (mat != null && mat.isItem()) {
+                        is.setType(mat);
+                    } else {
+                        is.setType(Material.BOOK);
+                    }
+
+                    ItemMeta meta = is.getItemMeta();
+                    if (meta == null) return is;
+
+                    boolean matching = user.isPresetMatchingEquipped(presetIndex);
+                    String header = (matching ? "§a§l[適用中] " : "") + "§bプリセット #" + (presetIndex + 1) + ": §f" + preset.getName();
+                    meta.setDisplayName(header);
+
+                    List<String> lore = new ArrayList<>();
+                    lore.add("§7登録スキル:");
+                    List<Ability> abilities = preset.getAbilities();
+                    if (abilities.isEmpty()) {
+                        lore.add("  §8(未登録)");
+                    } else {
+                        for (Ability ab : abilities) {
+                            lore.add("  §a✔ §f" + ab.getDisplayName(user.getLocale(), false) + " §7(§b" + ab.getSkill().getDisplayName(user.getLocale(), false) + "§7)");
+                        }
+                    }
+                    lore.add("");
+                    lore.add("§e▶ 左クリック: §fこのプリセットを装備");
+                    lore.add("§e▶ 右クリック: §f現在のスキル構成を上書き保存");
+                    lore.add("§e▶ Shift+左クリック: §f一括編成画面を開く");
+                    lore.add("§c▶ Shift+右クリック: §7このプリセットを初期化");
+
+                    meta.setLore(lore);
+                    if (matching) {
+                        meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+                        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                    } else {
+                        meta.removeEnchant(Enchantment.UNBREAKING);
+                    }
+                    is.setItemMeta(meta);
+                    return is;
+                });
+
+                item.onClick(c -> {
+                    Player player = c.player();
+                    User user = plugin.getUser(player);
+                    AbilityPreset preset = user.getPreset(presetIndex);
+
+                    boolean shift = c.event().isShiftClick();
+                    boolean right = c.event().isRightClick();
+
+                    if (shift && !right) {
+                        // Shift + 左クリック: 一括編成画面を開く
+                        user.setSelectedPresetIndex(presetIndex);
+                        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 0.7f, 1.0f);
+                        plugin.getSlate().openMenu(player, "presets");
+                        return;
+                    }
+
+                    if (shift && right) {
+                        // Shift + 右クリック: プリセット初期化
+                        preset.clearAbilities();
+                        player.playSound(player.getLocation(), Sound.ENTITY_ITEM_BREAK, SoundCategory.PLAYERS, 0.7f, 1.0f);
+                        player.sendMessage("§eプリセット #" + (presetIndex + 1) + "「§f" + preset.getName() + "§e」の登録スキルを初期化しました。");
+                        plugin.getSlate().openMenu(player, menuName, c.menu().getProperties());
+                        return;
+                    }
+
+                    if (right) {
+                        // 通常右クリック: 現在のスキル構成を上書き保存
+                        List<Ability> currentEquipped = user.getEquippedAbilities();
+                        if (currentEquipped.isEmpty()) {
+                            player.sendMessage("§c現在装備中のパッシブスキルがありません。");
+                            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, SoundCategory.PLAYERS, 0.7f, 0.8f);
+                            return;
+                        }
+                        user.saveCurrentToPreset(presetIndex);
+                        player.playSound(player.getLocation(), Sound.BLOCK_ENCHANTMENT_TABLE_USE, SoundCategory.PLAYERS, 0.7f, 1.2f);
+                        player.sendMessage("§aプリセット #" + (presetIndex + 1) + "「§f" + preset.getName() + "§a」に現在のスキル構成を保存しました！");
+                        plugin.getSlate().openMenu(player, menuName, c.menu().getProperties());
+                        return;
+                    }
+
+                    // 通常左クリック: プリセットを装備
+                    if (preset.getAbilities().isEmpty()) {
+                        player.sendMessage("§eプリセット #" + (presetIndex + 1) + " にはまだスキルが登録されていません。右クリックで現在の構成を保存するか、Shift+左クリックで編成画面を開けます。");
+                        player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, SoundCategory.PLAYERS, 0.7f, 0.8f);
+                        return;
+                    }
+
+                    if (user.isInCombat()) {
+                        long remainingMs = 5000L - (System.currentTimeMillis() - user.getLastCombatTime());
+                        double sec = Math.max(0.1, remainingMs / 1000.0);
+                        player.sendMessage("§c戦闘中はパッシブスキルを変更できません！ (残り " + String.format(Locale.ROOT, "%.1f", sec) + "秒)");
+                        player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, SoundCategory.PLAYERS, 0.7f, 0.8f);
+                        return;
+                    }
+
+                    user.applyPreset(presetIndex);
+                    player.playSound(player.getLocation(), Sound.ITEM_ARMOR_EQUIP_DIAMOND, SoundCategory.PLAYERS, 0.7f, 1.0f);
+                    player.sendMessage("§aプリセット #" + (presetIndex + 1) + "「§f" + preset.getName() + "§a」を装備しました！");
+                    plugin.getSlate().openMenu(player, menuName, c.menu().getProperties());
+                });
+            });
+        }
+    }
 }

@@ -71,6 +71,8 @@ public abstract class User {
 
     private final List<Ability> equippedAbilities = new CopyOnWriteArrayList<>();
     private volatile long lastCombatTime = 0L;
+    private final AbilityPreset[] abilityPresets = new AbilityPreset[AbilityPreset.MAX_PRESETS];
+    private volatile int selectedPresetIndex = 0;
 
     private final Map<String, Multiplier> multipliers;
     private final JobsBatchData jobsBatchData;
@@ -97,6 +99,9 @@ public abstract class User {
         this.jobsBatchData = new JobsBatchData();
         this.sessionAntiAfkLogs = new ArrayList<>();
         this.lastJobSelectTime = 0;
+        for (int i = 0; i < AbilityPreset.MAX_PRESETS; i++) {
+            this.abilityPresets[i] = new AbilityPreset(i);
+        }
     }
 
     public AuraSkillsPlugin getPlugin() {
@@ -623,6 +628,67 @@ public abstract class User {
 
     protected void onEquippedAbilitiesChanged() {
         // Overridden in BukkitUser to recalculate stats/traits immediately
+    }
+
+    public AbilityPreset getPreset(int index) {
+        int safeIndex = Math.max(0, Math.min(AbilityPreset.MAX_PRESETS - 1, index));
+        return abilityPresets[safeIndex];
+    }
+
+    public List<AbilityPreset> getPresets() {
+        return List.of(abilityPresets);
+    }
+
+    public int getSelectedPresetIndex() {
+        return selectedPresetIndex;
+    }
+
+    public void setSelectedPresetIndex(int index) {
+        this.selectedPresetIndex = Math.max(0, Math.min(AbilityPreset.MAX_PRESETS - 1, index));
+    }
+
+    public void clearEquippedAbilities() {
+        if (equippedAbilities.isEmpty()) return;
+        equippedAbilities.clear();
+        onEquippedAbilitiesChanged();
+    }
+
+    public void saveCurrentToPreset(int index) {
+        AbilityPreset preset = getPreset(index);
+        preset.setAbilities(equippedAbilities);
+        this.selectedPresetIndex = preset.getIndex();
+        this.blank = false;
+    }
+
+    public boolean applyPreset(int index) {
+        AbilityPreset preset = getPreset(index);
+        this.selectedPresetIndex = preset.getIndex();
+        List<Ability> valid = new ArrayList<>(MAX_EQUIPPED_ABILITIES);
+        for (Ability ability : preset.getAbilities()) {
+            if (ability != null && ability.isEnabled() && getAbilityLevel(ability) > 0 && !valid.contains(ability)) {
+                if (valid.size() < MAX_EQUIPPED_ABILITIES) {
+                    valid.add(ability);
+                }
+            }
+        }
+        equippedAbilities.clear();
+        equippedAbilities.addAll(valid);
+        this.blank = false;
+        onEquippedAbilitiesChanged();
+        return true;
+    }
+
+    public boolean isPresetMatchingEquipped(int index) {
+        AbilityPreset preset = getPreset(index);
+        List<Ability> presetList = preset.getAbilities();
+        if (presetList.isEmpty()) return false;
+        if (presetList.size() != equippedAbilities.size()) return false;
+        for (int i = 0; i < presetList.size(); i++) {
+            if (!presetList.get(i).equals(equippedAbilities.get(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public SkillsUser toApi() {

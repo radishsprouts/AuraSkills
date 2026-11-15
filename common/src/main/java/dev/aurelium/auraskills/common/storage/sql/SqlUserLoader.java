@@ -17,6 +17,7 @@ import dev.aurelium.auraskills.api.util.AuraSkillsModifier.Operation;
 import dev.aurelium.auraskills.api.util.NumberUtil;
 import dev.aurelium.auraskills.common.AuraSkillsPlugin;
 import dev.aurelium.auraskills.common.ui.ActionBarType;
+import dev.aurelium.auraskills.common.user.AbilityPreset;
 import dev.aurelium.auraskills.common.user.User;
 import dev.aurelium.auraskills.common.util.data.KeyIntPair;
 import org.jetbrains.annotations.NotNull;
@@ -259,17 +260,43 @@ public class SqlUserLoader {
     }
 
     private void applyEquippedAbilities(User user, String keyName, String valueStr) {
-        if (!keyName.equals("equipped")) return;
-        String[] splitValue = valueStr.split(",");
-        java.util.List<Ability> abilities = new java.util.ArrayList<>();
-        for (String abilityId : splitValue) {
-            if (abilityId.isEmpty()) continue;
-            Ability ability = plugin.getAbilityRegistry().getOrNull(NamespacedId.fromString(abilityId));
-            if (ability != null) {
-                abilities.add(ability);
+        if (keyName.equals("equipped")) {
+            String[] splitValue = valueStr.split(",");
+            java.util.List<Ability> abilities = new java.util.ArrayList<>();
+            for (String abilityId : splitValue) {
+                if (abilityId.isEmpty()) continue;
+                Ability ability = plugin.getAbilityRegistry().getOrNull(NamespacedId.fromString(abilityId));
+                if (ability != null) {
+                    abilities.add(ability);
+                }
+            }
+            user.setEquippedAbilitiesFromStorage(abilities);
+        } else if (keyName.startsWith("preset_")) {
+            try {
+                int index = Integer.parseInt(keyName.substring("preset_".length()));
+                if (index >= 0 && index < AbilityPreset.MAX_PRESETS) {
+                    AbilityPreset preset = user.getPreset(index);
+                    String[] parts = valueStr.split("\\|", -1);
+                    if (parts.length >= 1 && !parts[0].isEmpty()) {
+                        preset.setName(parts[0]);
+                    }
+                    if (parts.length >= 2 && !parts[1].isEmpty()) {
+                        preset.setIconMaterial(parts[1]);
+                    }
+                    if (parts.length >= 3 && !parts[2].isEmpty()) {
+                        String[] abSplit = parts[2].split(",");
+                        java.util.List<Ability> list = new java.util.ArrayList<>();
+                        for (String abId : abSplit) {
+                            if (abId.isEmpty()) continue;
+                            Ability ab = plugin.getAbilityRegistry().getOrNull(NamespacedId.fromString(abId));
+                            if (ab != null) list.add(ab);
+                        }
+                        preset.setAbilities(list);
+                    }
+                }
+            } catch (Exception ignored) {
             }
         }
-        user.setEquippedAbilitiesFromStorage(abilities);
     }
 
     @Nullable

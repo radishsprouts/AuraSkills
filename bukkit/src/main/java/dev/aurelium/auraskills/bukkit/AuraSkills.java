@@ -38,6 +38,7 @@ import dev.aurelium.auraskills.bukkit.mana.BukkitManaAbilityManager;
 import dev.aurelium.auraskills.bukkit.menus.MenuFileManager;
 import dev.aurelium.auraskills.bukkit.menus.MenuOptions;
 import dev.aurelium.auraskills.bukkit.menus.MenuRegistrar;
+import dev.aurelium.auraskills.bukkit.menus.util.PresetRenameGui;
 import dev.aurelium.auraskills.bukkit.menus.util.SlateMenuHelper;
 import dev.aurelium.auraskills.bukkit.message.BukkitMessageProvider;
 import dev.aurelium.auraskills.bukkit.region.BukkitRegionManager;
@@ -158,6 +159,7 @@ public class AuraSkills extends JavaPlugin implements AuraSkillsPlugin {
     private BukkitRegionManager regionManager;
     private BukkitWorldManager worldManager;
     private BukkitLootManager lootManager;
+    private PresetRenameGui presetRenameGui;
     private BukkitModifierManager modifierManager;
     private RequirementManager requirementManager;
     private BackupProvider backupProvider;
@@ -462,6 +464,12 @@ public class AuraSkills extends JavaPlugin implements AuraSkillsPlugin {
         pm.registerEvents(new PlayerDeath(this), this);
         pm.registerEvents(new JobsListener(this), this);
         pm.registerEvents(((BukkitLeaderboardExclusion) leaderboardManager.getLeaderboardExclusion()), this);
+        this.presetRenameGui = new PresetRenameGui(this);
+        pm.registerEvents(presetRenameGui, this);
+    }
+
+    public PresetRenameGui getPresetRenameGui() {
+        return presetRenameGui;
     }
 
     public BukkitAudiences getAudiences() {
