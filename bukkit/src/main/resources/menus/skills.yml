@@ -183,6 +183,7 @@ templates:
     - component: skill_job_active
     - ' '
     - '<yellow>{{skill_click}}'
+    - '<yellow>{{skill_sources_click}}'
 components:
   stats_leveled:
     context: Skill

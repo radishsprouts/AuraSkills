@@ -898,7 +898,8 @@ menus:
     your_skills_desc: "様々なタスクをこなしてスキルをアップグレードし、貴重なステータスブーストやアビリティなどをアンロックしよう！"
     your_skills_hover: "スキルにカーソルを合わせると詳細が表示されます！"
     your_skills_click: "スキルをクリックすると、レベルアップが表示されます！"
-    skill_click: "クリックするとレベル進行が表示されます！"
+    skill_click: "<gray>[左クリック]</gray> <yellow>レベル進行を表示"
+    skill_sources_click: "<gray>[右クリック]</gray> <yellow>獲得経験値一覧を表示"
     stats: "統計"
     stats_desc: "スキルのレベルアップでステータスバフを獲得"
     stats_click: "クリックすると詳細が表示されます。"
@@ -913,9 +914,9 @@ menus:
     mana_ability_unlock: "マナアビリティーアンロック"
     progress: "進捗状況"
     leaderboard_click: '{skill}リーダーボードを見るにはクリックしてください。'
-    sources: "XP ソース"
-    sources_desc: "ソースメニューには、スキルでXPを獲得できるすべての方法と、各ソースで獲得できるXPが表示されます。"
-    sources_click: '{skill}ソースを表示するにはクリックしてください。'
+    sources: "獲得経験値一覧"
+    sources_desc: "このスキルで経験値を獲得できるすべての行動（対象ブロック・モブ等）と獲得XPを確認できます。"
+    sources_click: "クリックして獲得経験値一覧を表示"
     abilities: "アビリティー"
     abilities_desc: '<2>アビリティ</2> <1>スキルのレベルアップに伴ってアンロック、アップグレードされるパッシブな特典。'
     mana_abilities_desc: '<3>マナ能力</3> <1>は起動を必要とし、マナを消費する特殊な能力である。'
@@ -942,15 +943,15 @@ menus:
   leaderboard:
     leaderboard_title: '{skill} リーダーボード'
   sources:
-    sources_title: '{skill} XP ソース'
-    sorter: "ソートXPソース"
-    descending: "最高から最低まで"
-    ascending: "最低から最高まで"
-    alphabetical: "名前順 (A-Z)"
-    reverse_alphabetical: "名前 (Z-A)"
-    sort_click: "クリックしてソートタイプを循環させる"
-    multiplied_xp: '乗算 {xp_unit}'
-    multiplied_desc: "これは、現在のXP倍率に基づいて実際に獲得できるXPです。"
+    sources_title: "{skill} 獲得経験値一覧"
+    sorter: "並び替え"
+    descending: "獲得XPが多い順"
+    ascending: "獲得XPが少ない順"
+    alphabetical: "名前順 (昇順)"
+    reverse_alphabetical: "名前順 (降順)"
+    sort_click: "クリックして並び替え順を切り替え"
+    multiplied_xp: "倍率適用後XP"
+    multiplied_desc: "アビリティや権限などのXP倍率が適用された値です。"
   abilities:
     abilities_title: '{skill} アビリティー'
     description: "説明"

@@ -6,6 +6,7 @@ import dev.aurelium.auraskills.api.source.XpSource;
 import dev.aurelium.auraskills.api.util.NumberUtil;
 import dev.aurelium.auraskills.bukkit.AuraSkills;
 import dev.aurelium.auraskills.bukkit.menus.shared.GlobalItems;
+import dev.aurelium.auraskills.bukkit.menus.util.LevelProgressionOpener;
 import dev.aurelium.auraskills.bukkit.menus.util.SourceComparator;
 import dev.aurelium.auraskills.common.message.type.MenuMessage;
 import dev.aurelium.auraskills.common.user.User;
@@ -92,7 +93,18 @@ public class SourcesMenu {
                 "previous_menu", "level_progression"));
 
         var globalItems = new GlobalItems(plugin);
-        menu.item("back", globalItems::backToLevelProgression);
+        menu.item("back", item -> {
+            item.replace("menu_name", p -> TextUtil.capitalizeWord(TextUtil.replace((String) p.menu().getProperty("previous_menu"), "_", " ")));
+            item.onClick(c -> {
+                String prev = (String) c.menu().getProperty("previous_menu");
+                if ("skills".equals(prev)) {
+                    plugin.getSlate().openMenu(c.player(), "skills");
+                } else {
+                    new LevelProgressionOpener(plugin).open(c.player(), (Skill) c.menu().getProperty("skill"));
+                }
+            });
+            item.modify(i -> i.menu().getProperty("previous_menu") == null ? null : i.item());
+        });
         menu.item("previous_page", globalItems::previousPage);
         menu.item("next_page", globalItems::nextPage);
         menu.fillItem(globalItems::fill);

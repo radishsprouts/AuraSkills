@@ -49,8 +49,8 @@ components:
 formats:
   sort_type_entry: '<gray>{selected}{type_name}'
   selected: '<white>> '
-  source_xp: '<green>{xp}'
-  source_xp_rate: '<green>{xp}/{unit}'
+  source_xp: '<green>+{xp}'
+  source_xp_rate: '<green>+{xp}/{unit}'
 options:
   source_start: 1,1
   source_end: 4,8

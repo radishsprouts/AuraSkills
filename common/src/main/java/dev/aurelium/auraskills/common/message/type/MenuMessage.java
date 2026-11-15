@@ -43,6 +43,7 @@ public enum MenuMessage implements MessageKey {
     YOUR_SKILLS_HOVER(1),
     YOUR_SKILLS_CLICK(1),
     SKILL_CLICK(1),
+    SKILL_SOURCES_CLICK(1),
     STATS(1),
     STATS_DESC(1),
     STATS_CLICK(1),

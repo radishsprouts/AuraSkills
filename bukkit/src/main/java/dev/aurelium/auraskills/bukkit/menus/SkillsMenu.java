@@ -8,13 +8,16 @@ import dev.aurelium.auraskills.bukkit.menus.shared.SkillItem;
 import dev.aurelium.auraskills.bukkit.menus.util.LevelProgressionOpener;
 import dev.aurelium.auraskills.bukkit.util.ConfigurateItemParser;
 import dev.aurelium.auraskills.common.user.User;
+import dev.aurelium.slate.builder.BuiltMenu;
 import dev.aurelium.slate.builder.MenuBuilder;
+import dev.aurelium.slate.info.MenuInfo;
 import dev.aurelium.slate.position.PositionProvider;
 import org.bukkit.Bukkit;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.spongepowered.configurate.ConfigurationNode;
 import org.spongepowered.configurate.serialize.SerializationException;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
@@ -59,7 +62,17 @@ public class SkillsMenu {
 
             template.onClick(c -> {
                 User user = plugin.getUser(c.player());
-                if (user.hasSkillPermission(c.value())) {
+                if (!user.hasSkillPermission(c.value())) {
+                    return;
+                }
+                if (c.event().getClick().isRightClick()) {
+                    BuiltMenu sourcesMenu = plugin.getSlate().getBuiltMenu("sources");
+                    MenuInfo info = new MenuInfo(plugin.getSlate(), c.player(), c.menu());
+                    Map<String, Object> properties = new HashMap<>(sourcesMenu.propertyProvider().get(info));
+                    properties.put("skill", c.value());
+                    properties.put("previous_menu", "skills");
+                    plugin.getSlate().openMenu(c.player(), "sources", properties);
+                } else {
                     new LevelProgressionOpener(plugin).open(c.player(), c.value());
                 }
             });

@@ -75,6 +75,7 @@ public class SkillItem {
         template.replace("desc", p -> p.value().getDescription(p.locale(), false));
         template.replace("level", p -> RomanNumber.toRoman(plugin.getUser(p.player()).getSkillLevel(p.value()), plugin));
         template.replace("skill_click", p -> plugin.getMsg(MenuMessage.SKILL_CLICK, p.locale()));
+        template.replace("skill_sources_click", p -> plugin.getMsg(MenuMessage.SKILL_SOURCES_CLICK, p.locale()));
 
         template.modify(t -> {
             if (!t.value().isEnabled()) return null;
