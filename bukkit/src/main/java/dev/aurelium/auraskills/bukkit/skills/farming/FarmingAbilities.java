@@ -17,6 +17,7 @@ import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.data.Ageable;
 import org.bukkit.entity.Entity;
@@ -158,7 +159,7 @@ public class FarmingAbilities extends BukkitAbilityImpl {
         Location loc = block.getLocation();
 
         if (activeAutoHarvestLocations.contains(loc)) {
-            handleReplant(loc, block.getType());
+            handleReplant(block, block.getType());
             return;
         }
 
@@ -172,7 +173,7 @@ public class FarmingAbilities extends BukkitAbilityImpl {
         // Auto replant & 3x3 harvest
         var replantAbility = Abilities.AUTO_REPLANT;
         if (!isDisabled(replantAbility) && !failsChecks(player, replantAbility)) {
-            handleReplant(loc, block.getType());
+            handleReplant(block, block.getType());
 
             if (player.getInventory().getItemInMainHand().getType().name().endsWith("_HOE")) {
                 double chance = getValue(replantAbility, user) / 100.0;
@@ -182,12 +183,14 @@ public class FarmingAbilities extends BukkitAbilityImpl {
                             if (dx == 0 && dz == 0) continue;
                             Block adj = block.getRelative(dx, 0, dz);
                             if (adj.getBlockData() instanceof Ageable adjAgeable && adjAgeable.getAge() >= adjAgeable.getMaximumAge()) {
+                                Material adjType = adj.getType();
                                 activeAutoHarvestLocations.add(adj.getLocation());
                                 try {
                                     player.breakBlock(adj);
                                 } finally {
                                     activeAutoHarvestLocations.remove(adj.getLocation());
                                 }
+                                handleReplant(adj, adjType);
                             }
                         }
                     }
@@ -212,23 +215,38 @@ public class FarmingAbilities extends BukkitAbilityImpl {
         }
     }
 
-    private void handleReplant(Location loc, Material cropType) {
+    private void handleReplant(Block block, Material cropType) {
+        Location loc = block.getLocation();
         plugin.getScheduler().scheduleAtLocation(loc, () -> {
-            if (loc.getBlock().getType() == Material.AIR) {
-                Block below = loc.clone().subtract(0, 1, 0).getBlock();
+            Block target = loc.getBlock();
+            // プレイヤーが別の固形ブロック等を意図的に設置していない限り、再植え付けを実行
+            if (target.getType().isAir() || isCrop(target.getType())) {
+                Block below = target.getRelative(BlockFace.DOWN);
+                boolean isFarmland = below.getType() == Material.FARMLAND;
+                // 万一、バニラの水分抜けや接触判定で土に戻ってしまっていた場合、FARMLANDに再耕起して保護
+                if (!isFarmland && (below.getType() == Material.DIRT || below.getType() == Material.DIRT_PATH) && cropType != Material.NETHER_WART && cropType != Material.COCOA) {
+                    below.setType(Material.FARMLAND);
+                    isFarmland = true;
+                }
                 boolean canPlant = (cropType == Material.NETHER_WART && below.getType() == Material.SOUL_SAND)
-                        || (cropType != Material.COCOA && below.getType() == Material.FARMLAND)
+                        || (cropType != Material.COCOA && isFarmland)
                         || (cropType == Material.COCOA);
                 if (canPlant) {
-                    loc.getBlock().setType(cropType);
-                    if (loc.getBlock().getBlockData() instanceof Ageable newAgeable) {
+                    target.setType(cropType);
+                    if (target.getBlockData() instanceof Ageable newAgeable) {
                         newAgeable.setAge(0);
-                        loc.getBlock().setBlockData(newAgeable);
-                        loc.getWorld().playSound(loc, Sound.ITEM_CROP_PLANT, SoundCategory.PLAYERS, 0.7f, 1.2f);
+                        target.setBlockData(newAgeable);
+                        target.getWorld().playSound(loc, Sound.ITEM_CROP_PLANT, SoundCategory.PLAYERS, 0.7f, 1.2f);
                     }
                 }
             }
-        }, 50, TimeUnit.MILLISECONDS);
+        }, 100, TimeUnit.MILLISECONDS);
+    }
+
+    private boolean isCrop(Material mat) {
+        return mat == Material.WHEAT || mat == Material.CARROTS || mat == Material.POTATOES
+                || mat == Material.BEETROOTS || mat == Material.NETHER_WART || mat == Material.COCOA
+                || mat == Material.TORCHFLOWER_CROP || mat == Material.PITCHER_CROP;
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
