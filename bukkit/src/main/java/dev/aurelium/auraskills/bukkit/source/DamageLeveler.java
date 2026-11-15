@@ -9,24 +9,37 @@ import dev.aurelium.auraskills.bukkit.AuraSkills;
 import dev.aurelium.auraskills.bukkit.level.BukkitLevelManager;
 import dev.aurelium.auraskills.common.source.SourceTypes;
 import dev.aurelium.auraskills.common.user.User;
+import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.projectiles.ProjectileSource;
 
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class DamageLeveler extends SourceLeveler {
 
     private final Map<UUID, Long> lastGainTime = new ConcurrentHashMap<>();
+    private final NamespacedKey defenseHitsKey;
+    private final NamespacedKey spawnerMobKey;
+    private final NamespacedKey roseStackerSpawner;
+    private final Map<UUID, StationaryDefenseRecord> stationaryDefenseRecords = new ConcurrentHashMap<>();
+    private final Map<UUID, FallDamageRecord> fallDamageRecords = new ConcurrentHashMap<>();
 
     public DamageLeveler(AuraSkills plugin) {
         super(plugin, SourceTypes.DAMAGE);
+        this.defenseHitsKey = new NamespacedKey(plugin, "defense_xp_hits");
+        this.spawnerMobKey = new NamespacedKey(plugin, "is_spawner_mob");
+        this.roseStackerSpawner = NamespacedKey.fromString("rosestacker:spawner_spawned");
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -69,9 +82,68 @@ public class DamageLeveler extends SourceLeveler {
 
         if (failsChecks(event, player, player.getLocation(), skill)) return;
 
-        // Check shield blocking option
-        if (skill.equals(Skills.DEFENSE) && !Skills.DEFENSE.optionBoolean("allow_shield_blocking", false) && player.isBlocking()) {
-            return;
+        // Defense skill specific anti-afk and exploit protections
+        if (skill.equals(Skills.DEFENSE)) {
+            // Check shield blocking option
+            if (!Skills.DEFENSE.optionBoolean("allow_shield_blocking", false) && player.isBlocking()) {
+                return;
+            }
+
+            // Defense from mob attack: verify mob origin and hit count limits
+            if (event instanceof EntityDamageByEntityEvent entityEvent && entityEvent.getDamager() instanceof LivingEntity damagerLiving) {
+                MobCombatTracker tracker = ((BukkitLevelManager) plugin.getLevelManager()).getMobCombatTracker();
+                if (tracker != null) {
+                    // Block defense XP from artificial spawn mobs (silverfish blocks, spawners, potions, etc.)
+                    if (tracker.isNoDefenseXp(damagerLiving)) {
+                        return;
+                    }
+                }
+
+                PersistentDataContainer pdc = damagerLiving.getPersistentDataContainer();
+                if (pdc.has(spawnerMobKey, PersistentDataType.INTEGER) || pdc.has(roseStackerSpawner, PersistentDataType.INTEGER)) {
+                    return;
+                }
+
+                // Per-mob defense hit limit (maximum 5 hits per mob)
+                int hits = pdc.getOrDefault(defenseHitsKey, PersistentDataType.INTEGER, 0);
+                if (hits >= 5) {
+                    return;
+                }
+                pdc.set(defenseHitsKey, PersistentDataType.INTEGER, hits + 1);
+            }
+
+            // Stationary defense check (taking damage repeatedly without moving or looking around)
+            Location loc = player.getLocation();
+            StationaryDefenseRecord defRecord = stationaryDefenseRecords.computeIfAbsent(player.getUniqueId(), u -> new StationaryDefenseRecord(loc));
+            boolean withinRadius = defRecord.isWithinRadius(loc, 3.0);
+            boolean headMoved = defRecord.hasHeadMoved(loc);
+
+            if (withinRadius) {
+                defRecord.increment();
+                if (headMoved) {
+                    defRecord.updateHead(loc);
+                }
+                if (defRecord.getCount() > 10) {
+                    return; // Stationary defense limit exceeded
+                }
+            } else {
+                if (!headMoved) {
+                    defRecord.increment();
+                    if (defRecord.getCount() > 10) {
+                        return;
+                    }
+                } else {
+                    defRecord.reset(loc);
+                }
+            }
+        }
+
+        // Fall damage anti-afk check (Agility XP loop in water-elevator / drop trap)
+        if (event.getCause() == EntityDamageEvent.DamageCause.FALL) {
+            FallDamageRecord fallRecord = fallDamageRecords.computeIfAbsent(player.getUniqueId(), u -> new FallDamageRecord(player.getLocation()));
+            if (fallRecord.recordFall(player.getLocation())) {
+                return; // Stationary fall loop detected
+            }
         }
 
         double damage;
@@ -209,6 +281,81 @@ public class DamageLeveler extends SourceLeveler {
             return livingEntity.getType().toString().equalsIgnoreCase(name);
         }
         return false;
+    }
+
+    public static class StationaryDefenseRecord {
+        private Location anchorLocation;
+        private float lastYaw;
+        private float lastPitch;
+        private int count = 0;
+
+        public StationaryDefenseRecord(Location loc) {
+            this.anchorLocation = loc.clone();
+            this.lastYaw = loc.getYaw();
+            this.lastPitch = loc.getPitch();
+            this.count = 1;
+        }
+
+        public boolean isWithinRadius(Location loc, double radius) {
+            if (!Objects.equals(loc.getWorld(), anchorLocation.getWorld())) return false;
+            return loc.distanceSquared(anchorLocation) <= radius * radius;
+        }
+
+        public boolean hasHeadMoved(Location loc) {
+            float yawDiff = Math.abs(loc.getYaw() - lastYaw);
+            if (yawDiff > 180.0f) yawDiff = 360.0f - yawDiff;
+            float pitchDiff = Math.abs(loc.getPitch() - lastPitch);
+            return yawDiff > 5.0f || pitchDiff > 3.0f;
+        }
+
+        public void increment() {
+            this.count++;
+        }
+
+        public int getCount() {
+            return count;
+        }
+
+        public void updateHead(Location loc) {
+            this.lastYaw = loc.getYaw();
+            this.lastPitch = loc.getPitch();
+        }
+
+        public void reset(Location loc) {
+            this.anchorLocation = loc.clone();
+            this.lastYaw = loc.getYaw();
+            this.lastPitch = loc.getPitch();
+            this.count = 1;
+        }
+    }
+
+    public static class FallDamageRecord {
+        private Location lastLocation;
+        private long lastTime;
+        private int streak;
+
+        public FallDamageRecord(Location loc) {
+            this.lastLocation = loc.clone();
+            this.lastTime = System.currentTimeMillis();
+            this.streak = 1;
+        }
+
+        public boolean recordFall(Location loc) {
+            long now = System.currentTimeMillis();
+            boolean samePlace = Objects.equals(loc.getWorld(), lastLocation.getWorld())
+                    && loc.distanceSquared(lastLocation) <= 4.0; // 2m radius
+            boolean recent = (now - lastTime) <= 45000L; // within 45s
+
+            this.lastLocation = loc.clone();
+            this.lastTime = now;
+
+            if (samePlace && recent) {
+                streak++;
+            } else {
+                streak = 1;
+            }
+            return streak > 3; // Block XP if streak > 3
+        }
     }
 
 }

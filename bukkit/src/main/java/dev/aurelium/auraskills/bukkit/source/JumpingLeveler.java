@@ -6,6 +6,7 @@ import dev.aurelium.auraskills.api.source.type.JumpingXpSource;
 import dev.aurelium.auraskills.bukkit.AuraSkills;
 import dev.aurelium.auraskills.bukkit.util.CompatUtil;
 import dev.aurelium.auraskills.common.source.SourceTypes;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -13,12 +14,16 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.potion.PotionEffect;
 
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class JumpingLeveler extends SourceLeveler {
 
     private final Set<UUID> prevPlayersOnGround = Sets.newConcurrentHashSet();
+    private final Map<UUID, JumpAfkRecord> jumpAfkRecords = new ConcurrentHashMap<>();
 
     public JumpingLeveler(AuraSkills plugin) {
         super(plugin, SourceTypes.JUMPING);
@@ -61,6 +66,12 @@ public class JumpingLeveler extends SourceLeveler {
         var skillSource = plugin.getSkillManager().getSingleSourceOfType(JumpingXpSource.class);
         if (skillSource == null) return;
 
+        // Anti-AFK jump check (e.g. weighted key, constant jumping on the exact same block)
+        JumpAfkRecord afkRecord = jumpAfkRecords.computeIfAbsent(player.getUniqueId(), u -> new JumpAfkRecord(player.getLocation()));
+        if (afkRecord.recordJump(player.getLocation())) {
+            return;
+        }
+
         JumpingXpSource source = skillSource.source();
         Skill skill = skillSource.skill();
 
@@ -76,6 +87,39 @@ public class JumpingLeveler extends SourceLeveler {
             }
         } else {
             player.setMetadata("skillsJumps", new FixedMetadataValue(plugin, 1));
+        }
+    }
+
+    public static class JumpAfkRecord {
+        private Location anchorLocation;
+        private float lastYaw;
+        private float lastPitch;
+        private int stationaryJumps = 0;
+
+        public JumpAfkRecord(Location loc) {
+            this.anchorLocation = loc.clone();
+            this.lastYaw = loc.getYaw();
+            this.lastPitch = loc.getPitch();
+        }
+
+        public boolean recordJump(Location loc) {
+            boolean sameAnchor = Objects.equals(loc.getWorld(), anchorLocation.getWorld())
+                    && loc.distanceSquared(anchorLocation) <= 0.36; // 0.6m horizontal threshold
+            float yawDiff = Math.abs(loc.getYaw() - lastYaw);
+            if (yawDiff > 180.0f) yawDiff = 360.0f - yawDiff;
+            float pitchDiff = Math.abs(loc.getPitch() - lastPitch);
+            boolean headMoved = yawDiff > 5.0f || pitchDiff > 3.0f;
+
+            if (sameAnchor && !headMoved) {
+                stationaryJumps++;
+            } else {
+                stationaryJumps = 0;
+                anchorLocation = loc.clone();
+                lastYaw = loc.getYaw();
+                lastPitch = loc.getPitch();
+            }
+
+            return stationaryJumps > 15; // Block jump counting if jumped > 15 times on exact spot without looking/moving
         }
     }
 

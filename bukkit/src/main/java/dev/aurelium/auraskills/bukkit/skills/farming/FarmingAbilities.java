@@ -44,6 +44,7 @@ public class FarmingAbilities extends BukkitAbilityImpl {
 
     private final Random random = new Random();
     private final java.util.Set<Location> activeAutoHarvestLocations = java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>());
+    private final java.util.Map<java.util.UUID, PlayerActivityRecord> playerActivities = new java.util.concurrent.ConcurrentHashMap<>();
 
     public FarmingAbilities(AuraSkills plugin) {
         super(plugin, Abilities.BOUNTIFUL_HARVEST, Abilities.FARMER, Abilities.GENETICIST, Abilities.SCYTHE_MASTER, Abilities.GROWTH_AURA,
@@ -121,7 +122,10 @@ public class FarmingAbilities extends BukkitAbilityImpl {
         List<Player> playerList = entities.stream().filter(e -> e instanceof Player).map(e -> (Player) e).toList();
 
         for (Player player : playerList) {
-            handleGrowthAura(player, block, event.getNewState());
+            PlayerActivityRecord record = playerActivities.computeIfAbsent(player.getUniqueId(), u -> new PlayerActivityRecord(player.getLocation()));
+            if (!record.isAfk(player)) {
+                handleGrowthAura(player, block, event.getNewState());
+            }
         }
     }
 
@@ -326,6 +330,43 @@ public class FarmingAbilities extends BukkitAbilityImpl {
                  MUSHROOM_STEW, RABBIT_STEW, SUSPICIOUS_STEW, SWEET_BERRIES, GLOW_BERRIES -> true;
             default -> false;
         };
+    }
+
+    private static class PlayerActivityRecord {
+        private Location lastLocation;
+        private float lastYaw;
+        private float lastPitch;
+        private long lastActiveTime;
+
+        public PlayerActivityRecord(Location loc) {
+            this.lastLocation = loc.clone();
+            this.lastYaw = loc.getYaw();
+            this.lastPitch = loc.getPitch();
+            this.lastActiveTime = System.currentTimeMillis();
+        }
+
+        public boolean isAfk(Player player) {
+            Location current = player.getLocation();
+            long now = System.currentTimeMillis();
+
+            float yawDiff = Math.abs(current.getYaw() - lastYaw);
+            if (yawDiff > 180.0f) yawDiff = 360.0f - yawDiff;
+            float pitchDiff = Math.abs(current.getPitch() - lastPitch);
+            boolean headMoved = yawDiff > 5.0f || pitchDiff > 3.0f;
+            boolean moved = !java.util.Objects.equals(current.getWorld(), lastLocation.getWorld())
+                    || current.distanceSquared(lastLocation) > 4.0; // Moved > 2m
+
+            if (moved || headMoved) {
+                this.lastLocation = current.clone();
+                this.lastYaw = current.getYaw();
+                this.lastPitch = current.getPitch();
+                this.lastActiveTime = now;
+                return false;
+            }
+
+            // If player stayed in the same 2m radius without looking around for > 2 minutes, considered AFK
+            return (now - lastActiveTime) > 120000L;
+        }
     }
 
 }

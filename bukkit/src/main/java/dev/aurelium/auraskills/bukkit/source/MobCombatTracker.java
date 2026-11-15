@@ -32,7 +32,9 @@ public class MobCombatTracker implements Listener {
 
     private final AuraSkills plugin;
     public static final String TRAP_KILL_KEY = "trap_kill";
+    public static final String NO_DEFENSE_XP_KEY = "no_defense_xp";
     private final NamespacedKey trapKillKey;
+    private final NamespacedKey noDefenseXpKey;
 
     // Cache of combat records per entity UUID
     private final Map<UUID, CombatRecord> combatRecords = new ConcurrentHashMap<>();
@@ -43,10 +45,15 @@ public class MobCombatTracker implements Listener {
     public MobCombatTracker(AuraSkills plugin) {
         this.plugin = plugin;
         this.trapKillKey = new NamespacedKey(plugin, TRAP_KILL_KEY);
+        this.noDefenseXpKey = new NamespacedKey(plugin, NO_DEFENSE_XP_KEY);
     }
 
     public NamespacedKey getTrapKillKey() {
         return trapKillKey;
+    }
+
+    public NamespacedKey getNoDefenseXpKey() {
+        return noDefenseXpKey;
     }
 
     public boolean isTrapKill(LivingEntity entity) {
@@ -56,6 +63,15 @@ public class MobCombatTracker implements Listener {
 
     public void markTrapKill(LivingEntity entity) {
         entity.getPersistentDataContainer().set(trapKillKey, PersistentDataType.INTEGER, 1);
+    }
+
+    public boolean isNoDefenseXp(LivingEntity entity) {
+        PersistentDataContainer pdc = entity.getPersistentDataContainer();
+        return pdc.has(noDefenseXpKey, PersistentDataType.INTEGER);
+    }
+
+    public void markNoDefenseXp(LivingEntity entity) {
+        entity.getPersistentDataContainer().set(noDefenseXpKey, PersistentDataType.INTEGER, 1);
     }
 
     @Nullable
@@ -95,15 +111,29 @@ public class MobCombatTracker implements Listener {
         LivingEntity entity = event.getEntity();
         if (!isCombatMob(entity)) return;
 
+        CreatureSpawnEvent.SpawnReason reason = event.getSpawnReason();
+
+        // Mark artificial/special spawn mobs that should not grant passive defense XP (silverfish blocks, spawners, potions, infestation)
+        if (reason == CreatureSpawnEvent.SpawnReason.SPAWNER
+                || reason == CreatureSpawnEvent.SpawnReason.SILVERFISH_BLOCK
+                || reason == CreatureSpawnEvent.SpawnReason.SPELL
+                || reason == CreatureSpawnEvent.SpawnReason.REINFORCEMENTS
+                || reason.name().contains("INFEST")
+                || reason.name().contains("POTION")) {
+            markNoDefenseXp(entity);
+        }
+
         // Player created mobs (Iron Golem, Snow Golem)
-        if (event.getSpawnReason() == CreatureSpawnEvent.SpawnReason.BUILD_IRONGOLEM
-                || event.getSpawnReason() == CreatureSpawnEvent.SpawnReason.BUILD_SNOWMAN) {
+        if (reason == CreatureSpawnEvent.SpawnReason.BUILD_IRONGOLEM
+                || reason == CreatureSpawnEvent.SpawnReason.BUILD_SNOWMAN) {
             markTrapKill(entity);
+            markNoDefenseXp(entity);
             return;
         }
 
         if (entity instanceof IronGolem golem && golem.isPlayerCreated()) {
             markTrapKill(entity);
+            markNoDefenseXp(entity);
         }
     }
 
@@ -111,6 +141,7 @@ public class MobCombatTracker implements Listener {
     public void onEntityTransform(EntityTransformEvent event) {
         Entity original = event.getEntity();
         boolean wasTrap = original.getPersistentDataContainer().has(trapKillKey, PersistentDataType.INTEGER);
+        boolean wasNoDefenseXp = original.getPersistentDataContainer().has(noDefenseXpKey, PersistentDataType.INTEGER);
         CombatRecord originalRecord = combatRecords.get(original.getUniqueId());
 
         if (wasTrap || (originalRecord != null && originalRecord.isTainted())) {
@@ -120,12 +151,20 @@ public class MobCombatTracker implements Listener {
                 }
             }
         }
+        if (wasNoDefenseXp) {
+            for (Entity transformed : event.getTransformedEntities()) {
+                if (transformed instanceof LivingEntity living) {
+                    markNoDefenseXp(living);
+                }
+            }
+        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onSlimeSplit(SlimeSplitEvent event) {
         LivingEntity original = event.getEntity();
         boolean wasTrap = original.getPersistentDataContainer().has(trapKillKey, PersistentDataType.INTEGER);
+        boolean wasNoDefenseXp = original.getPersistentDataContainer().has(noDefenseXpKey, PersistentDataType.INTEGER);
         CombatRecord originalRecord = combatRecords.get(original.getUniqueId());
 
         if (wasTrap || (originalRecord != null && originalRecord.isTainted())) {
@@ -136,6 +175,17 @@ public class MobCombatTracker implements Listener {
                 for (Entity e : nearby) {
                     if (e instanceof Slime && e != original) {
                         markTrapKill((LivingEntity) e);
+                    }
+                }
+            });
+        }
+        if (wasNoDefenseXp) {
+            plugin.getScheduler().executeSync(() -> {
+                Location loc = original.getLocation();
+                Collection<Entity> nearby = loc.getWorld().getNearbyEntities(loc, 3.0, 3.0, 3.0);
+                for (Entity e : nearby) {
+                    if (e instanceof Slime && e != original) {
+                        markNoDefenseXp((LivingEntity) e);
                     }
                 }
             });
@@ -164,7 +214,14 @@ public class MobCombatTracker implements Listener {
         Player playerDamager = null;
         EntityXpSource.EntityDamagers damagerType = EntityXpSource.EntityDamagers.PLAYER;
         if (event instanceof EntityDamageByEntityEvent byEntityEvent) {
-            playerDamager = resolvePlayerDamager(byEntityEvent.getDamager());
+            // Passive thorns or ability reflection counter-attacks are not player legit combat attacks
+            boolean isThorns = event.getCause() == EntityDamageEvent.DamageCause.THORNS;
+            if (!isThorns) {
+                playerDamager = resolvePlayerDamager(byEntityEvent.getDamager());
+                if (playerDamager != null && playerDamager.hasMetadata("auraskills_thorns_counter")) {
+                    playerDamager = null;
+                }
+            }
             if (byEntityEvent.getDamager() instanceof Projectile) {
                 damagerType = EntityXpSource.EntityDamagers.PROJECTILE;
             }
@@ -436,12 +493,26 @@ public class MobCombatTracker implements Listener {
         PlayerStationaryRecord record = stationaryRecords.computeIfAbsent(player.getUniqueId(),
                 u -> new PlayerStationaryRecord(currentLoc));
 
-        if (record.isWithinRadius(currentLoc, radius)) {
+        boolean withinRadius = record.isWithinRadius(currentLoc, radius);
+        boolean headMoved = record.hasHeadMoved(currentLoc);
+
+        if (withinRadius) {
             record.increment();
+            if (headMoved) {
+                record.updateHead(currentLoc);
+            }
             return record.getCount() > limit;
         } else {
-            record.reset(currentLoc);
-            return false;
+            // Player moved outside the radius.
+            // If the player did NOT move their head (e.g. pushed by water stream, slime launcher, piston),
+            // it is an AFK movement exploit -> do NOT reset the kill count!
+            if (!headMoved) {
+                record.increment();
+                return record.getCount() > limit;
+            } else {
+                record.reset(currentLoc);
+                return false;
+            }
         }
     }
 
@@ -531,10 +602,14 @@ public class MobCombatTracker implements Listener {
      */
     public static class PlayerStationaryRecord {
         private Location baseLocation;
+        private float lastYaw;
+        private float lastPitch;
         private int count = 0;
 
         public PlayerStationaryRecord(Location baseLocation) {
             this.baseLocation = baseLocation.clone();
+            this.lastYaw = baseLocation.getYaw();
+            this.lastPitch = baseLocation.getPitch();
             this.count = 1;
         }
 
@@ -543,6 +618,20 @@ public class MobCombatTracker implements Listener {
                 return false;
             }
             return loc.distanceSquared(baseLocation) <= radius * radius;
+        }
+
+        public boolean hasHeadMoved(Location loc) {
+            float yawDiff = Math.abs(loc.getYaw() - lastYaw);
+            if (yawDiff > 180.0f) {
+                yawDiff = 360.0f - yawDiff;
+            }
+            float pitchDiff = Math.abs(loc.getPitch() - lastPitch);
+            return yawDiff > 5.0f || pitchDiff > 3.0f;
+        }
+
+        public void updateHead(Location loc) {
+            this.lastYaw = loc.getYaw();
+            this.lastPitch = loc.getPitch();
         }
 
         public void increment() {
@@ -555,6 +644,8 @@ public class MobCombatTracker implements Listener {
 
         public void reset(Location newLoc) {
             this.baseLocation = newLoc.clone();
+            this.lastYaw = newLoc.getYaw();
+            this.lastPitch = newLoc.getPitch();
             this.count = 1;
         }
     }

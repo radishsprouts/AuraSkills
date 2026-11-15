@@ -20,21 +20,19 @@ public final class PositionHandler {
     }
 
     public boolean failsCheck(CheckData data, PlayerRef player) {
-        @Nullable LocationRef prevLoc = data.getCache("previous_location", LocationRef.class, null);
+        @Nullable LocationRef anchorLoc = data.getCache("anchor_location", LocationRef.class, null);
         LocationRef currentLoc = player.getLocation();
 
-        data.setCache("previous_location", currentLoc);
-
-        if (prevLoc == null) return false;
-
-        if (!Objects.equals(currentLoc.getWorldName().orElse(null), prevLoc.getWorldName().orElse(null))) {
+        if (anchorLoc == null || !Objects.equals(currentLoc.getWorldName().orElse(null), anchorLoc.getWorldName().orElse(null))) {
+            data.setCache("anchor_location", currentLoc);
             data.resetCount();
             return false;
         }
 
-        if (distanceSquared.applyAsDouble(currentLoc, prevLoc) <= maxDistance * maxDistance) {
+        if (distanceSquared.applyAsDouble(currentLoc, anchorLoc) <= maxDistance * maxDistance) {
             data.incrementCount();
         } else {
+            data.setCache("anchor_location", currentLoc);
             data.resetCount();
         }
 

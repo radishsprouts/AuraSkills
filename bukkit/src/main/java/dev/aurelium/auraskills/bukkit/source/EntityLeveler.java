@@ -99,8 +99,8 @@ public class EntityLeveler extends SourceLeveler {
             }
         }
 
-        // If no tracked valid player, fallback to entity.getKiller()
-        if (validPlayers.isEmpty()) {
+        // If no tracked valid player, fallback to entity.getKiller() (only if kill was not caused by thorns or passive reflection)
+        if (validPlayers.isEmpty() && defaultDamageCause != DamageCause.THORNS) {
             Player killer = entity.getKiller();
             if (killer == null) {
                 killer = getBleedDamager(entity);
