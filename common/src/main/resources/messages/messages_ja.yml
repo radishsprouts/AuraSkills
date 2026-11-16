@@ -1217,4 +1217,26 @@ units:
   mana: "マナ"
   hp: "体力"
   xp: "経験値"
-file_version: 32
+xp_reduction:
+  format_reduced: "<yellow>スキル経験値 {percent}%<gray>：<white>{reason}"
+  format_zero: "<yellow>スキル経験値なし<gray>：<white>{reason}"
+  reason:
+    no_ai: "動かないモブは対象外"
+    player_golem: "プレイヤー製のゴーレムは対象外"
+    vehicle_trapped: "乗り物のモブへの攻撃は減額"
+    from_boat: "ボートからの攻撃は減額"
+    held_in_place: "足止めしたモブへの攻撃は減額"
+    crammed: "詰め込んだモブへの攻撃は減額"
+    no_sight: "隙間・物陰からの攻撃は減額"
+    water_current: "水流で運ばれるモブは減額"
+    unreachable: "モブが届かない位置からは減額"
+    stationary: "同じ場所での撃破が続いています"
+    chunk_kill_max: "この周辺の撃破上限に達しました"
+    environment: "自分以外のダメージ分は減額"
+    other_trap: "対象外のモブから生まれたモブです"
+    afk_position: "しばらく同じ位置のままです"
+    afk_facing: "しばらく同じ向きのままです"
+    afk_target: "同じ相手が続いています"
+    afk_block: "同じブロックが続いています"
+    afk_fishing: "釣りの場所と動きが同じままです"
+file_version: 33

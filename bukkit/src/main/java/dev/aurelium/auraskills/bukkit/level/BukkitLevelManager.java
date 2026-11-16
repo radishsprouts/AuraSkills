@@ -29,12 +29,18 @@ public class BukkitLevelManager extends LevelManager {
     private final AuraSkills plugin;
     private final Set<SourceLeveler> levelers;
     private final MobCombatTracker mobCombatTracker;
+    private final XpReductionNotifier xpReductionNotifier;
 
     public BukkitLevelManager(AuraSkills plugin) {
         super(plugin);
         this.plugin = plugin;
         this.levelers = Sets.newConcurrentHashSet();
         this.mobCombatTracker = new MobCombatTracker(plugin);
+        this.xpReductionNotifier = new XpReductionNotifier(plugin);
+    }
+
+    public XpReductionNotifier getXpReductionNotifier() {
+        return xpReductionNotifier;
     }
 
     public MobCombatTracker getMobCombatTracker() {
@@ -48,6 +54,7 @@ public class BukkitLevelManager extends LevelManager {
 
     public void registerLevelers() {
         levelers.clear();
+        mobCombatTracker.start();
         Bukkit.getPluginManager().registerEvents(mobCombatTracker, plugin);
         registerLeveler(new AnvilLeveler(plugin));
         registerLeveler(new BlockLeveler(plugin));
@@ -80,17 +87,21 @@ public class BukkitLevelManager extends LevelManager {
         throw new IllegalArgumentException("Leveler " + levelerClass.getSimpleName() + " is not registered!");
     }
 
-    public void addEntityXp(User user, Skill skill, @NotNull XpSource source, double amount,
+    /**
+     * @return 経験値を実際に付与したら true（量が0・イベントが取り消された場合は false）
+     */
+    public boolean addEntityXp(User user, Skill skill, @NotNull XpSource source, double amount,
             LivingEntity attacked, Entity damager, EntityEvent originalEvent) {
-        if (amount == 0) return; // Ignore if source amount is 0
+        if (amount == 0) return false; // Ignore if source amount is 0
 
         double amountToAdd = amount * calculateMultiplier(user, skill);
 
         EntityXpGainEvent event = new EntityXpGainEvent(BukkitUser.getPlayer(user.toApi()), user.toApi(), skill, source, amountToAdd, attacked, damager, originalEvent);
         Bukkit.getPluginManager().callEvent(event);
-        if (event.isCancelled()) return;
+        if (event.isCancelled()) return false;
 
         addXpRaw(user, skill, event.getAmount(), source);
+        return true;
     }
 
     public void addDamageXp(User user, Skill skill, @NotNull XpSource source, double amount,

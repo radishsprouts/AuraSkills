@@ -5,6 +5,7 @@ import dev.aurelium.auraskills.api.source.type.EntityXpSource;
 import dev.aurelium.auraskills.bukkit.antiafk.BukkitAntiAfkManager;
 import dev.aurelium.auraskills.bukkit.antiafk.BukkitCheck;
 import dev.aurelium.auraskills.bukkit.antiafk.BukkitCheckType;
+import dev.aurelium.auraskills.bukkit.source.XpReductionReason;
 import dev.aurelium.auraskills.common.antiafk.IdentityHandler;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -26,8 +27,7 @@ public class EntityC extends BukkitCheck {
 
         Player player = event.getPlayer();
         if (handler.failsCheck(getCheckData(player), event.getAttacked().getUniqueId())) {
-            event.setCancelled(true);
-            logFail(player);
+            cancelXpGain(event, player, XpReductionReason.AFK_TARGET);
         }
     }
 

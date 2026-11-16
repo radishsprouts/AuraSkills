@@ -374,7 +374,9 @@ public class ArcheryAbilities extends BukkitAbilityImpl {
             double extraDmg = Math.max(0.5, event.getDamage() * ignoreRatio * 0.35);
             player.setMetadata("auraskills_apollo_pierce", new FixedMetadataValue(plugin, true));
             try {
-                target.damage(extraDmg);
+                // 発生源の無いダメージのまま、戦闘記録にはこのプレイヤーの正規ダメージとして帰属させる
+                ((dev.aurelium.auraskills.bukkit.level.BukkitLevelManager) plugin.getLevelManager()).getMobCombatTracker()
+                        .runAttributed(player, () -> target.damage(extraDmg));
             } finally {
                 player.removeMetadata("auraskills_apollo_pierce", plugin);
             }

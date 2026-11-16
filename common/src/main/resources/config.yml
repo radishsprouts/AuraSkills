@@ -281,7 +281,6 @@ source:
     give_alchemy_on_potion_combat: false
     trap_protection:
       enabled: true
-      min_legit_damage_ratio: 0.70
       max_crammed_entities: 5
       prevent_vanilla_xp: true
       prevent_vehicle_cheese: true

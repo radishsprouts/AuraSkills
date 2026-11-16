@@ -165,7 +165,6 @@ public enum Option {
     SOURCE_STATISTIC_GAIN_PERIOD_TICKS("source.statistic.gain_period_ticks", OptionType.INT),
     SOURCE_ENTITY_GIVE_ALCHEMY_ON_POTION_COMBAT("source.entity.give_alchemy_on_potion_combat", OptionType.BOOLEAN),
     SOURCE_ENTITY_TRAP_PROTECTION_ENABLED("source.entity.trap_protection.enabled", OptionType.BOOLEAN),
-    SOURCE_ENTITY_TRAP_PROTECTION_MIN_LEGIT_DAMAGE_RATIO("source.entity.trap_protection.min_legit_damage_ratio", OptionType.DOUBLE),
     SOURCE_ENTITY_TRAP_PROTECTION_MAX_CRAMMED_ENTITIES("source.entity.trap_protection.max_crammed_entities", OptionType.INT),
     SOURCE_ENTITY_TRAP_PROTECTION_PREVENT_VANILLA_XP("source.entity.trap_protection.prevent_vanilla_xp", OptionType.BOOLEAN),
     SOURCE_ENTITY_TRAP_PROTECTION_PREVENT_VEHICLE_CHEESE("source.entity.trap_protection.prevent_vehicle_cheese", OptionType.BOOLEAN),

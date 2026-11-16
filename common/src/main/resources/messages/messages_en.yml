@@ -1217,4 +1217,26 @@ units:
   mana: Mana
   hp: HP
   xp: XP
-file_version: 40
+xp_reduction:
+  format_reduced: "<yellow>Skill XP {percent}%<gray>: <white>{reason}"
+  format_zero: "<yellow>No skill XP<gray>: <white>{reason}"
+  reason:
+    no_ai: "Mobs that can't move don't count"
+    player_golem: "Player-built golems don't count"
+    vehicle_trapped: "Reduced for mobs stuck in vehicles"
+    from_boat: "Reduced for attacks from a boat"
+    held_in_place: "Reduced for mobs held in place"
+    crammed: "Reduced for crammed mobs"
+    no_sight: "Reduced for attacks through gaps"
+    water_current: "Reduced for mobs carried by water"
+    unreachable: "Reduced for attacks from out of reach"
+    stationary: "Many kills in the same spot"
+    chunk_kill_max: "Kill limit reached in this area"
+    environment: "Reduced for damage not dealt by you"
+    other_trap: "Spawned from a mob that doesn't count"
+    afk_position: "Same position for a while"
+    afk_facing: "Same facing for a while"
+    afk_target: "Same target for a while"
+    afk_block: "Same block for a while"
+    afk_fishing: "Same fishing spot and motion"
+file_version: 41

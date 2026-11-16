@@ -16,6 +16,7 @@ import dev.aurelium.auraskills.bukkit.util.AttributeCompat;
 import dev.aurelium.auraskills.common.config.Option;
 import dev.aurelium.auraskills.common.source.SourceTypes;
 import dev.aurelium.auraskills.common.user.User;
+import dev.aurelium.auraskills.paper.util.PaperCombatUtil;
 import dev.aurelium.auraskills.common.util.data.Pair;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -32,7 +33,10 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.EnumMap;
+import java.util.Set;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -54,12 +58,17 @@ public class EntityLeveler extends SourceLeveler {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onEntityDeath(EntityDeathEvent event) {
-        if (disabled()) return;
         LivingEntity entity = event.getEntity();
+        BukkitLevelManager levelManager = (BukkitLevelManager) plugin.getLevelManager();
+        MobCombatTracker tracker = levelManager.getMobCombatTracker();
 
-        if (preventMythicXp(entity)) return;
+        // 経験値を出さずに戻る場合も、戦闘の記録は必ず消す（溜まり続けない）
+        if (disabled() || preventMythicXp(entity)) {
+            if (tracker != null) tracker.removeCombatRecord(entity.getUniqueId());
+            return;
+        }
 
-        MobCombatTracker tracker = ((BukkitLevelManager) plugin.getLevelManager()).getMobCombatTracker();
+        // 確定的な罠（AI無効・プレイヤー製ゴーレムなど）は0。通知は MobCombatTracker が済ませている
         if (tracker != null && tracker.isTrapKill(entity)) {
             tracker.removeCombatRecord(entity.getUniqueId());
             return;
@@ -73,6 +82,7 @@ public class EntityLeveler extends SourceLeveler {
 
         MobCombatTracker.CombatRecord record = tracker != null ? tracker.removeCombatRecord(entity.getUniqueId()) : null;
         Map<UUID, Double> playerDamages = record != null ? record.getPlayerDamages() : Collections.emptyMap();
+        boolean protectionEnabled = plugin.configBoolean(Option.SOURCE_ENTITY_TRAP_PROTECTION_ENABLED);
 
         Location deathLoc = entity.getLocation();
         DamageCause defaultDamageCause = DamageCause.ENTITY_ATTACK;
@@ -80,87 +90,213 @@ public class EntityLeveler extends SourceLeveler {
             defaultDamageCause = entity.getLastDamageCause().getCause();
         }
 
-        // Collect valid participating players within 64 blocks of the death location in the same world
-        Map<Player, Double> validPlayers = new HashMap<>();
-        double totalValidDamage = 0.0;
-
+        // 分母に使う正規ダメージ合計は、範囲外・オフラインの人の分も含めた記録全体の合計。
+        // 経験値を受け取れるのは範囲内（同じワールドで64ブロック以内）のオンラインの人だけで、範囲外の人の分は誰にも配らない
+        Map<UUID, Double> legitDamages = new LinkedHashMap<>();
+        double totalLegitDamage = 0.0;
         for (Map.Entry<UUID, Double> entry : playerDamages.entrySet()) {
-            Player p = Bukkit.getPlayer(entry.getKey());
-            if (p != null && p.isOnline()) {
-                if (Objects.equals(p.getWorld(), deathLoc.getWorld())) {
-                    if (deathLoc.distanceSquared(p.getLocation()) <= 64.0 * 64.0) {
-                        double dmg = entry.getValue();
-                        if (dmg > 0.0) {
-                            validPlayers.put(p, dmg);
-                            totalValidDamage += dmg;
-                        }
-                    }
-                }
+            double dmg = entry.getValue();
+            if (dmg > 0.0) {
+                legitDamages.put(entry.getKey(), dmg);
+                totalLegitDamage += dmg;
             }
         }
 
-        // If no tracked valid player, fallback to entity.getKiller() (only if kill was not caused by thorns or passive reflection)
-        if (validPlayers.isEmpty() && defaultDamageCause != DamageCause.THORNS) {
+        double illegalDamage = record != null ? record.getIllegalDamage() : 0.0;
+        double environmentDamage = record != null ? record.getEnvironmentDamage() : 0.0;
+        boolean fallbackKiller = false;
+
+        // 記録に正規・不正・環境のダメージが一切無い時だけ、entity.getKiller() を使う
+        // （棘の鎧・反射による撃破は除く）。範囲外の人の正規ダメージがあるなら使わない
+        if (CombatXpMath.useFallbackKiller(totalLegitDamage, illegalDamage, environmentDamage)
+                && defaultDamageCause != DamageCause.THORNS) {
             Player killer = entity.getKiller();
             if (killer == null) {
                 killer = getBleedDamager(entity);
             }
-            if (killer != null && killer.isOnline() && Objects.equals(killer.getWorld(), deathLoc.getWorld())) {
-                if (deathLoc.distanceSquared(killer.getLocation()) <= 64.0 * 64.0) {
-                    validPlayers.put(killer, 1.0);
-                    totalValidDamage = 1.0;
-                }
+            if (killer != null) {
+                legitDamages.put(killer.getUniqueId(), 1.0);
+                totalLegitDamage = 1.0;
+                fallbackKiller = true;
             }
         }
 
-        if (validPlayers.isEmpty() || totalValidDamage <= 0.0) {
-            return;
+        // 不正・環境による減額後の割合（複数人の山分けは含まない）。保護が無効なら減額しない
+        double factor = 1.0;
+        if (protectionEnabled && !fallbackKiller) {
+            factor = CombatXpMath.reductionFactor(totalLegitDamage, illegalDamage, environmentDamage);
+        }
+        boolean preventVanilla = plugin.configBoolean(Option.SOURCE_ENTITY_TRAP_PROTECTION_PREVENT_VANILLA_XP);
+        int totalDroppedExp = event.getDroppedExp();
+        UUID stationaryId = record != null ? record.getStationaryPlayer() : null;
+
+        // 減額の理由ごとの重み（不正の理由別 + 環境）
+        Map<XpReductionReason, Double> weights = new EnumMap<>(XpReductionReason.class);
+        if (record != null) {
+            weights.putAll(record.getIllegalReasons());
+            if (environmentDamage > 0.0) {
+                weights.merge(XpReductionReason.ENVIRONMENT, environmentDamage, Double::sum);
+            }
         }
 
-        // 1. Distribute Vanilla XP directly to participating players by damage ratio
-        int totalDroppedExp = event.getDroppedExp();
+        DeathContext ctx = new DeathContext(entity, entity.getType(), deathLoc.clone(), event, record, tracker,
+                levelManager, protectionEnabled, fallbackKiller, factor, totalLegitDamage, preventVanilla,
+                totalDroppedExp, stationaryId, weights);
+
+        // 配る対象: 正規ダメージのある人と、不正なダメージだけを与えた参加者（理由の通知用）
+        Set<UUID> candidates = new LinkedHashSet<>(legitDamages.keySet());
+        if (protectionEnabled && record != null) {
+            candidates.addAll(record.getParticipants());
+        }
+        if (stationaryId != null) {
+            candidates.add(stationaryId);
+        }
+
+        boolean legitRecipient = false;
+        for (UUID id : candidates) {
+            Player p = Bukkit.getPlayer(id);
+            if (p == null) continue;
+
+            // このスレッドが触れる（同じリージョン）プレイヤーは、ここで範囲を判定する。
+            // 触れないプレイヤー（別リージョン）は、プレイヤー側のスレッドで範囲判定から行う
+            boolean local = PaperCombatUtil.isOwnedByCurrentRegion(p);
+            if (local && !isInRange(p, deathLoc)) continue;
+
+            double legit = legitDamages.getOrDefault(id, 0.0);
+            if (legit > 0.0) legitRecipient = true;
+
+            Award award = buildAward(entity, record, id, legit, defaultDamageCause);
+            if (local) {
+                giveAward(p, award, ctx, false);
+            } else {
+                plugin.getScheduler().executeAtEntity(p, task -> giveAward(p, award, ctx, true));
+            }
+        }
+
+        // バニラ経験値の玉は、配る人がいる時と、配る人がいない（不正・環境・範囲外だけの）時に出さない
         if (totalDroppedExp > 0) {
-            event.setDroppedExp(0); // Cancel ground orb drop to prevent snatching
-            for (Map.Entry<Player, Double> entry : validPlayers.entrySet()) {
-                Player p = entry.getKey();
-                double ratio = entry.getValue() / totalValidDamage;
-                int playerXp = Math.max(1, (int) Math.round(totalDroppedExp * ratio));
+            if (legitRecipient) {
+                event.setDroppedExp(0); // Cancel ground orb drop to prevent snatching
+            } else if (protectionEnabled && preventVanilla && !fallbackKiller
+                    && (illegalDamage + environmentDamage > 0.0 || totalLegitDamage > 0.0)) {
+                event.setDroppedExp(0);
+            }
+        }
+    }
+
+    /** 範囲内（同じワールドで死亡位置から64ブロック以内）か。プレイヤーに触れるスレッドで呼ぶこと。 */
+    private boolean isInRange(Player player, Location deathLoc) {
+        Location loc = player.getLocation();
+        return Objects.equals(loc.getWorld(), deathLoc.getWorld())
+                && deathLoc.distanceSquared(loc) <= 64.0 * 64.0;
+    }
+
+    /** 撃破側のスレッドで、そのプレイヤーに配るスキル経験値の元になる情報を決める（モブに触れる処理はここで済ませる）。 */
+    private Award buildAward(LivingEntity entity, MobCombatTracker.CombatRecord record, UUID id, double legit,
+                             DamageCause defaultDamageCause) {
+        EntityXpSource.EntityDamagers damagerType = record != null
+                ? record.getPlayerDamagerType(id)
+                : EntityXpSource.EntityDamagers.PLAYER;
+
+        DamageCause cause = defaultDamageCause;
+        if (damagerType == EntityXpSource.EntityDamagers.PROJECTILE) {
+            cause = DamageCause.PROJECTILE;
+        }
+
+        SkillSource<EntityXpSource> skillSource = getSource(entity, damagerType, EntityXpSource.EntityTriggers.DEATH, cause);
+        if (skillSource == null && damagerType != EntityXpSource.EntityDamagers.PLAYER) {
+            // Fallback to PLAYER damager if PROJECTILE source is not defined
+            skillSource = getSource(entity, EntityXpSource.EntityDamagers.PLAYER, EntityXpSource.EntityTriggers.DEATH, DamageCause.ENTITY_ATTACK);
+        }
+        double baseAmount = 0.0;
+        if (skillSource != null) {
+            baseAmount = getSpawnerMultiplier(entity, skillSource.skill()) * getLevelledMobsMultiplier(entity)
+                    * skillSource.source().getXp();
+        }
+        return new Award(id, legit, skillSource, baseAmount);
+    }
+
+    /**
+     * 1人分の配分（バニラ経験値・スキル経験値・減額の通知）。プレイヤーに触れる処理なので、
+     * そのプレイヤーを扱えるスレッド（同じリージョン、または executeAtEntity）で呼ぶ。
+     *
+     * @param checkRange 範囲の判定がまだなら true（別リージョンのプレイヤーを、プレイヤー側のスレッドで判定する）
+     */
+    private void giveAward(Player p, Award a, DeathContext c, boolean checkRange) {
+        if (!p.isOnline()) return;
+        if (checkRange && !isInRange(p, c.deathLoc())) return;
+
+        boolean stationary = a.id().equals(c.stationaryId());
+        // その人のスキル経験値の割合 = 正規ダメージ ÷（全員の正規合計 + 不正 + 環境）= 山分け × 減額後の割合
+        double share = CombatXpMath.shareRatio(a.legitDamage(), c.totalLegit());
+        // 連続撃破は撃破者本人だけを0にする
+        double ratio = stationary ? 0.0 : share * c.factor();
+
+        // 1. バニラ経験値（prevent_vanilla_xp が true の時は同じ割合）
+        if (a.legitDamage() > 0.0 && c.totalDroppedExp() > 0) {
+            double vanillaRatio = c.preventVanilla() ? ratio : share;
+            if (vanillaRatio > 0.0) {
+                int playerXp = Math.max(1, (int) Math.round(c.totalDroppedExp() * vanillaRatio));
                 p.giveExp(playerXp);
             }
         }
 
-        // 2. Distribute AuraSkills skill XP by damage ratio
-        for (Map.Entry<Player, Double> entry : validPlayers.entrySet()) {
-            Player p = entry.getKey();
-            double ratio = entry.getValue() / totalValidDamage;
+        // 2. スキル経験値
+        SkillSource<EntityXpSource> skillSource = a.skillSource();
+        if (skillSource == null) return;
+        Skill skill = skillSource.skill();
+        if (failsChecks(p, c.deathLoc(), skill)) return;
 
-            EntityXpSource.EntityDamagers damagerType = record != null
-                    ? record.getPlayerDamagerType(p.getUniqueId())
-                    : EntityXpSource.EntityDamagers.PLAYER;
-
-            DamageCause cause = defaultDamageCause;
-            if (damagerType == EntityXpSource.EntityDamagers.PROJECTILE) {
-                cause = DamageCause.PROJECTILE;
-            }
-
-            SkillSource<EntityXpSource> skillSource = getSource(entity, damagerType, EntityXpSource.EntityTriggers.DEATH, cause);
-            if (skillSource == null && damagerType != EntityXpSource.EntityDamagers.PLAYER) {
-                // Fallback to PLAYER damager if PROJECTILE source is not defined
-                skillSource = getSource(entity, EntityXpSource.EntityDamagers.PLAYER, EntityXpSource.EntityTriggers.DEATH, DamageCause.ENTITY_ATTACK);
-            }
-            if (skillSource == null) continue;
-
-            EntityXpSource source = skillSource.source();
-            Skill skill = skillSource.skill();
-
-            if (failsChecks(p, deathLoc, skill)) continue;
-
+        if (ratio > 0.0) {
             User user = plugin.getUser(p);
-            double baseAmount = getSpawnerMultiplier(entity, skill) * getLevelledMobsMultiplier(entity) * source.getXp();
-            double finalAmount = baseAmount * ratio;
-
-            plugin.getLevelManager().addEntityXp(user, skill, source, finalAmount, entity, p, event);
+            boolean granted = c.levelManager().addEntityXp(user, skill, skillSource.source(), a.baseAmount() * ratio,
+                    c.entity(), p, c.event());
+            // 対AFKなどで取り消された人には、減額の通知を出さない（対AFKは自分の通知を出す）
+            if (!granted) return;
         }
+
+        notifyReduction(p, a, c, stationary);
+    }
+
+    /** 実際に減額して付与した（または減額で0になった）人へだけ、理由と割合を通知する。山分けによる減少は減額ではない。 */
+    private void notifyReduction(Player p, Award a, DeathContext c, boolean stationary) {
+        if (!c.protectionEnabled() || c.fallbackKiller()) return;
+
+        XpReductionReason reason;
+        int percent;
+        if (stationary) {
+            reason = XpReductionReason.STATIONARY;
+            percent = 0;
+        } else if (a.legitDamage() > 0.0) {
+            percent = CombatXpMath.displayPercent(c.factor());
+            if (percent < 0 || percent >= 100) return;
+            reason = CombatXpMath.pickReason(c.weights(), XpReductionReason::isZero);
+        } else {
+            // 不正なダメージしか与えていない参加者: 経験値なし（その人の不正の理由を優先）
+            percent = 0;
+            reason = c.record() != null
+                    ? CombatXpMath.pickReason(c.record().getPlayerIllegalReasons(a.id()), XpReductionReason::isZero)
+                    : null;
+            if (reason == null) reason = CombatXpMath.pickReason(c.weights(), XpReductionReason::isZero);
+        }
+        if (reason == null) return;
+
+        c.levelManager().getXpReductionNotifier().notifyReduction(p, reason, percent);
+        if (c.tracker() != null) {
+            c.tracker().logJudgement(c.entityType(), reason, percent, List.of(a.id()));
+        }
+    }
+
+    /** 1人分の配分の元情報（撃破側のスレッドで作る）。 */
+    private record Award(UUID id, double legitDamage, @Nullable SkillSource<EntityXpSource> skillSource, double baseAmount) {
+    }
+
+    /** 1回の撃破で共通の情報。 */
+    private record DeathContext(LivingEntity entity, EntityType entityType, Location deathLoc, EntityDeathEvent event,
+                                @Nullable MobCombatTracker.CombatRecord record, @Nullable MobCombatTracker tracker,
+                                BukkitLevelManager levelManager, boolean protectionEnabled, boolean fallbackKiller,
+                                double factor, double totalLegit, boolean preventVanilla, int totalDroppedExp,
+                                @Nullable UUID stationaryId, Map<XpReductionReason, Double> weights) {
     }
 
     @EventHandler(priority = EventPriority.MONITOR)

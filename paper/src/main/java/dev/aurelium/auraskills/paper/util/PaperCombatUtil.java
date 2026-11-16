@@ -1,12 +1,21 @@
 package dev.aurelium.auraskills.paper.util;
 
 import com.destroystokyo.paper.entity.Pathfinder;
+import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.util.BoundingBox;
+
+import java.util.UUID;
+import java.util.function.Consumer;
 
 public class PaperCombatUtil {
 
@@ -30,8 +39,13 @@ public class PaperCombatUtil {
         Location playerLoc = player.getLocation();
         Location groundLoc = getGroundLocation(playerLoc);
         if (groundLoc == null) {
-            // Player is airborne or on a high pillar without solid ground directly beneath
-            return false;
+            if (isInWater(playerLoc)) {
+                // 水中・水面のプレイヤーには地面が無いので、地面の代わりにプレイヤーの位置を目標にする
+                groundLoc = playerLoc;
+            } else {
+                // Player is airborne or on a high pillar without solid ground directly beneath
+                return false;
+            }
         }
 
         // 1. Check for big mob restriction (low ceiling or tight passage where mob cannot fit)
@@ -112,8 +126,8 @@ public class PaperCombatUtil {
         // If mob height > 2.3 blocks (e.g. Enderman 2.9, Iron Golem 2.7, Warden 2.9), check vertical clearance above player
         if (mobHeight > 2.3) {
             Block groundBlock = groundLoc.getBlock();
-            int requiredHeight = (int) Math.ceil(mobHeight);
-            for (int y = 1; y <= requiredHeight; y++) {
+            int maxOffset = maxCeilingOffset(mobHeight);
+            for (int y = 1; y <= maxOffset; y++) {
                 Block checkBlock = groundBlock.getRelative(0, y, 0);
                 if (checkBlock.getType().isSolid()) {
                     // Solid ceiling blocks the large mob from entering player's space
@@ -139,8 +153,67 @@ public class PaperCombatUtil {
         return false;
     }
 
+    /**
+     * 高さ mobHeight のモブが立つのに必要な天井の確認範囲の上端（足元からのブロック数）。
+     * 足元のブロック（+0）にモブが立ち、+1 から +(ceil(height)-1) までが空いている必要がある
+     * （例: 高さ2.9なら +1・+2 まで。+3 は要求しない）。
+     */
+    public static int maxCeilingOffset(double mobHeight) {
+        return Math.max(0, (int) Math.ceil(mobHeight) - 1);
+    }
+
+    /** プレイヤーの足元（足のブロック）が水・泡の柱か。 */
+    public static boolean isInWater(Location playerLoc) {
+        Material type = playerLoc.getBlock().getType();
+        return type == Material.WATER || type == Material.BUBBLE_COLUMN;
+    }
+
     private static boolean isPassable(Block block) {
         Material type = block.getType();
         return type.isAir() || type == Material.WATER || type == Material.LAVA || !type.isSolid();
+    }
+
+    /**
+     * 現在のスレッド（Folia ではリージョンのスレッド）が、そのエンティティを触ってよいか。
+     * Folia 以外（単一のメインスレッド）では常に true。
+     */
+    public static boolean isOwnedByCurrentRegion(org.bukkit.entity.Entity entity) {
+        if (!PaperUtil.IS_PAPER) return true;
+        return Bukkit.isOwnedByCurrentRegion(entity);
+    }
+
+    /** エンティティが溶岩に触れているか（足元または目の位置のブロックが溶岩）。 */
+    public static boolean isInLava(org.bukkit.entity.LivingEntity entity) {
+        return entity.getLocation().getBlock().getType() == Material.LAVA
+                || entity.getEyeLocation().getBlock().getType() == Material.LAVA;
+    }
+
+    /**
+     * モブがワールドから取り除かれた時に、そのモブの UUID を渡すリスナーを登録する（Paper の EntityRemoveFromWorldEvent）。
+     * Paper 以外、またはイベントが無い版では何もせず false を返す。
+     *
+     * @return 登録できたら true
+     */
+    public static boolean registerEntityRemoveListener(Plugin plugin, Consumer<UUID> onRemove) {
+        if (!PaperUtil.IS_PAPER) return false;
+        try {
+            Bukkit.getPluginManager().registerEvents(new EntityRemoveListener(onRemove), plugin);
+            return true;
+        } catch (LinkageError e) {
+            return false;
+        }
+    }
+
+    private static final class EntityRemoveListener implements Listener {
+        private final Consumer<UUID> onRemove;
+
+        private EntityRemoveListener(Consumer<UUID> onRemove) {
+            this.onRemove = onRemove;
+        }
+
+        @EventHandler(priority = EventPriority.MONITOR)
+        public void onRemoveFromWorld(EntityRemoveFromWorldEvent event) {
+            onRemove.accept(event.getEntity().getUniqueId());
+        }
     }
 }
