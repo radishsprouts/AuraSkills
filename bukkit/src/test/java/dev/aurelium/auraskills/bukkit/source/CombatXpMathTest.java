@@ -77,6 +77,17 @@ class CombatXpMathTest {
     }
 
     @Test
+    void thornsOnlyKillRequiresEmptyRecordAndThornsCause() {
+        assertTrue(CombatXpMath.isThornsOnlyKill(0, 0, 0, true));
+        // 死因が棘でなければ対象外（撃破者の代用で経験値が入る）
+        assertFalse(CombatXpMath.isThornsOnlyKill(0, 0, 0, false));
+        // 正規・不正・環境のダメージがあるなら対象外
+        assertFalse(CombatXpMath.isThornsOnlyKill(30, 0, 0, true));
+        assertFalse(CombatXpMath.isThornsOnlyKill(0, 5, 0, true));
+        assertFalse(CombatXpMath.isThornsOnlyKill(0, 0, 5, true));
+    }
+
+    @Test
     void staleRecordIsDetectedAfterTtl() {
         long ttl = 5 * 60_000L;
         assertFalse(CombatXpMath.isStale(1000, 1000 + ttl, ttl));

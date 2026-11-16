@@ -31,6 +31,8 @@ public abstract class ActionBarManager {
     private final Map<UUID, Integer> timer = new ConcurrentHashMap<>();
     private final Map<UUID, Integer> currentAction = new ConcurrentHashMap<>();
     private final Map<Locale, String> idleMessageCache = new ConcurrentHashMap<>();
+    /** 経験値の減額理由など、他の表示より優先して見せる通知 */
+    private final ActionBarNoticeBoard noticeBoard = new ActionBarNoticeBoard();
 
     public ActionBarManager(AuraSkillsPlugin plugin, UiProvider uiProvider) {
         this.plugin = plugin;
@@ -67,11 +69,23 @@ public abstract class ActionBarManager {
         var task = new TaskRunnable() {
             @Override
             public void run() {
-                if (!plugin.configBoolean(Option.ACTION_BAR_IDLE) || !plugin.configBoolean(Option.ACTION_BAR_ENABLED)) {
+                if (!plugin.configBoolean(Option.ACTION_BAR_ENABLED)) {
                     return;
                 }
+                boolean idleEnabled = plugin.configBoolean(Option.ACTION_BAR_IDLE);
+                long now = System.currentTimeMillis();
                 for (User user : plugin.getUserManager().getOnlineUsers()) {
                     UUID uuid = user.getUuid();
+                    // 通知（経験値の減額理由など）が期限内なら、他の表示より優先して再送する。
+                    // 別スレッドの送信が一瞬上書きしても、次の周期で通知に戻る
+                    String notice = noticeBoard.active(uuid, now);
+                    if (notice != null) {
+                        uiProvider.sendActionBar(user, notice);
+                        continue;
+                    }
+                    if (!idleEnabled) {
+                        continue;
+                    }
                     // Check player setting
                     if (!user.isActionBarEnabled(ActionBarType.IDLE)) {
                         continue;
@@ -139,7 +153,7 @@ public abstract class ActionBarManager {
         }
 
         UUID uuid = user.getUuid();
-        if (isPaused.contains(uuid)) {
+        if (isPaused.contains(uuid) || noticeBoard.active(uuid, System.currentTimeMillis()) != null) {
             return;
         }
         // Set timer and is gaining xp
@@ -169,6 +183,11 @@ public abstract class ActionBarManager {
                             return;
                         }
 
+                        // 通知（減額理由など）が出ている間は、経験値の表示で上書きしない
+                        if (noticeBoard.active(uuid, System.currentTimeMillis()) != null) {
+                            return;
+                        }
+
                         String message = getXpActionBarMessage(user, skill, currentXp, levelXp, xpGained, level, maxed, income);
                         uiProvider.sendActionBar(user, message);
                     }
@@ -189,6 +208,7 @@ public abstract class ActionBarManager {
         timer.clear();
         currentAction.clear();
         isPaused.clear();
+        noticeBoard.clearAll();
         clearMessageCache();
     }
 
@@ -198,6 +218,16 @@ public abstract class ActionBarManager {
         timer.remove(uuid);
         currentAction.remove(uuid);
         isPaused.remove(uuid);
+        noticeBoard.clear(uuid);
+    }
+
+    /**
+     * 通知の文言を即座に送り、期限が切れるまで周期の更新で再送する。
+     * 期限内は待機・経験値獲得の表示がこの文言を上書きしない。
+     */
+    public void showNotice(User user, String message, long duration, TimeUnit timeUnit) {
+        noticeBoard.post(user.getUuid(), message, System.currentTimeMillis(), timeUnit.toMillis(duration));
+        uiProvider.sendActionBar(user, message);
     }
 
     public void setPaused(User user, int time, TimeUnit timeUnit) {

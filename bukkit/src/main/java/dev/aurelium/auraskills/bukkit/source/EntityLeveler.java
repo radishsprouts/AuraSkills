@@ -121,6 +121,21 @@ public class EntityLeveler extends SourceLeveler {
             }
         }
 
+        // 棘の鎧などの中立のダメージだけで倒した時は経験値を出さない（0のまま）が、撃破者へ理由を知らせる
+        if (CombatXpMath.isThornsOnlyKill(totalLegitDamage, illegalDamage, environmentDamage,
+                defaultDamageCause == DamageCause.THORNS)) {
+            Player thornsKiller = entity.getKiller();
+            if (thornsKiller == null) {
+                thornsKiller = getBleedDamager(entity);
+            }
+            if (thornsKiller != null) {
+                levelManager.getXpReductionNotifier().notifyReduction(thornsKiller, XpReductionReason.THORNS_ONLY, 0);
+                if (tracker != null) {
+                    tracker.logJudgement(entity.getType(), XpReductionReason.THORNS_ONLY, 0, List.of(thornsKiller.getUniqueId()));
+                }
+            }
+        }
+
         // 不正・環境による減額後の割合（複数人の山分けは含まない）。保護が無効なら減額しない
         double factor = 1.0;
         if (protectionEnabled && !fallbackKiller) {

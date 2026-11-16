@@ -5,6 +5,7 @@ import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
@@ -28,15 +29,25 @@ public class PaperCombatUtil {
      * @return true if the mob can pathfind or directly engage the player, false if obstructed/trapped
      */
     public static boolean canMobReachPlayer(Mob mob, Player player) {
+        return evaluateReach(mob, player).reachable();
+    }
+
+    /** 到達判定の結果。detail は、落ちた条件の説明（判定ログ用）。 */
+    public record ReachResult(boolean reachable, String detail) {
+    }
+
+    /**
+     * canMobReachPlayer の本体。どの条件で落ちたかを detail に入れて返す。
+     * 判定できない瞬間（モブが地面に立っていない等）は「届かない」にせず到達可能として返す。
+     */
+    public static ReachResult evaluateReach(Mob mob, Player player) {
+        Location playerLoc = player.getLocation();
+        Location mobLoc = mob.getLocation();
         if (!PaperUtil.IS_PAPER) {
-            // Fallback for non-Paper environments: simple vertical and direct distance check
-            Location mobLoc = mob.getLocation();
-            Location playerLoc = player.getLocation();
             double dy = playerLoc.getY() - mobLoc.getY();
-            return !(dy > 2.2) && !(dy < -2.5);
+            return new ReachResult(!(dy > 2.2) && !(dy < -2.5), "non-paper dy=" + fmt(dy));
         }
 
-        Location playerLoc = player.getLocation();
         Location groundLoc = getGroundLocation(playerLoc);
         if (groundLoc == null) {
             if (isInWater(playerLoc)) {
@@ -44,49 +55,74 @@ public class PaperCombatUtil {
                 groundLoc = playerLoc;
             } else {
                 // Player is airborne or on a high pillar without solid ground directly beneath
-                return false;
+                return new ReachResult(false, "ground=null(プレイヤー足元に地面なし) playerY=" + fmt(playerLoc.getY()));
             }
         }
 
         // 1. Check for big mob restriction (low ceiling or tight passage where mob cannot fit)
         if (isMobTooBigForPlayerSpace(mob, player, groundLoc)) {
-            return false;
+            return new ReachResult(false, "大型モブ制限(天井または狭い通路) h=" + fmt(mob.getHeight()) + " w=" + fmt(mob.getWidth()));
         }
 
-        // 2. Paper Pathfinder check
+        // 2. 経路探索は、モブが地面・液体・乗り物のどれにも居ない瞬間（ノックバック・落下中）は結果を返さない。
+        //    その瞬間は判定できないので「届かない」とは決めつけない
+        boolean onGround = mob.isOnGround();
+        boolean inLiquid = mob.isInWater() || isInLava(mob);
+        if (!onGround && !inLiquid && !mob.isInsideVehicle()) {
+            return new ReachResult(true, "判定不能(モブが接地していない)");
+        }
+
+        // 3. Paper Pathfinder check
+        String pathDetail;
         try {
             Pathfinder pathfinder = mob.getPathfinder();
             Pathfinder.PathResult path = pathfinder.findPath(groundLoc);
             if (path == null) {
-                return false;
+                pathDetail = "path=null";
+            } else {
+                Location finalPoint = path.getFinalPoint();
+                if (finalPoint == null) {
+                    pathDetail = "finalPoint=null";
+                } else {
+                    double dx = finalPoint.getX() - groundLoc.getX();
+                    double dz = finalPoint.getZ() - groundLoc.getZ();
+                    double horizontalDist = Math.sqrt(dx * dx + dz * dz);
+                    double dy = Math.abs(finalPoint.getY() - groundLoc.getY());
+                    // Final path point must be within 2.5 blocks horizontally and 1.5 blocks vertically of target
+                    if (horizontalDist <= 2.5 && dy <= 1.5) {
+                        return new ReachResult(true, "path ok");
+                    }
+                    pathDetail = "終点が遠い 水平=" + fmt(horizontalDist) + " 高低差=" + fmt(dy)
+                            + " 終点=" + fmt(finalPoint.getX()) + "," + fmt(finalPoint.getY()) + "," + fmt(finalPoint.getZ());
+                }
             }
-
-            Location finalPoint = path.getFinalPoint();
-            if (finalPoint == null) {
-                return false;
-            }
-
-            double dx = finalPoint.getX() - groundLoc.getX();
-            double dz = finalPoint.getZ() - groundLoc.getZ();
-            double horizontalDistSq = dx * dx + dz * dz;
-
-            // Final path point must be within 2.5 blocks horizontally of target
-            if (horizontalDistSq > 2.5 * 2.5) {
-                return false;
-            }
-
-            // Vertical height difference must be within 1.5 blocks
-            double dy = Math.abs(finalPoint.getY() - groundLoc.getY());
-            if (dy > 1.5) {
-                return false;
-            }
-
-            return true;
         } catch (Throwable t) {
             // In case of any pathfinding exception, default to direct distance sanity check
-            double dy = playerLoc.getY() - mob.getLocation().getY();
-            return !(dy > 2.2) && !(dy < -2.5);
+            double dy = playerLoc.getY() - mobLoc.getY();
+            return new ReachResult(!(dy > 2.2) && !(dy < -2.5),
+                    "経路探索で例外 " + t.getClass().getSimpleName() + " dy=" + fmt(dy));
         }
+
+        // 4. 経路探索が「届かない」と言っても、同じ高さの途切れない平地を障害物なしで歩いて行けるなら届く
+        //    （モブが動けない・探索が打ち切られた場合の誤判定を避ける。穴・段差・壁・低い天井は通れないと判定する）
+        World world = mobLoc.getWorld();
+        if (world != null && world.equals(groundLoc.getWorld())) {
+            boolean walkable = ReachMath.isFlatWalkable(
+                    (x, y, z) -> world.getBlockAt(x, y, z).getType().isSolid(),
+                    mobLoc.getX(), mobLoc.getY(), mobLoc.getZ(),
+                    groundLoc.getX(), groundLoc.getY(), groundLoc.getZ(),
+                    (int) Math.ceil(mob.getHeight()));
+            if (walkable) {
+                return new ReachResult(true, "経路探索は失敗(" + pathDetail + ")だが平地を直進できる");
+            }
+        }
+        double hd = Math.hypot(groundLoc.getX() - mobLoc.getX(), groundLoc.getZ() - mobLoc.getZ());
+        return new ReachResult(false, pathDetail + " 接地=" + onGround + " 液体=" + inLiquid
+                + " モブ→目標 水平=" + fmt(hd) + " 高低差=" + fmt(groundLoc.getY() - mobLoc.getY()));
+    }
+
+    private static String fmt(double v) {
+        return String.format(java.util.Locale.ROOT, "%.1f", v);
     }
 
     /**

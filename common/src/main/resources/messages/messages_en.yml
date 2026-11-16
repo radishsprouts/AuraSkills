@@ -1234,9 +1234,10 @@ xp_reduction:
     chunk_kill_max: "Kill limit reached in this area"
     environment: "Reduced for damage not dealt by you"
     other_trap: "Spawned from a mob that doesn't count"
+    thorns_only: "Killed only by thorns or counter damage"
     afk_position: "Same position for a while"
     afk_facing: "Same facing for a while"
     afk_target: "Same target for a while"
     afk_block: "Same block for a while"
     afk_fishing: "Same fishing spot and motion"
-file_version: 41
+file_version: 42

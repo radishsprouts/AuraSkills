@@ -11,6 +11,8 @@ public enum XpReductionReason {
     STATIONARY("stationary", true),
     CHUNK_KILL_MAX("chunk_kill_max", true),
     OTHER_TRAP("other_trap", true),
+    // 棘の鎧・反撃などの中立のダメージだけで倒した（対AFKの経験値稼ぎ対策。経験値は0）
+    THORNS_ONLY("thorns_only", true),
 
     // 不正な攻撃（その分だけ減額）
     VEHICLE_TRAPPED("vehicle_trapped", false),

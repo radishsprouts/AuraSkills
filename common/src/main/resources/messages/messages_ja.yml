@@ -1234,9 +1234,10 @@ xp_reduction:
     chunk_kill_max: "この周辺の撃破上限に達しました"
     environment: "自分以外のダメージ分は減額"
     other_trap: "対象外のモブから生まれたモブです"
+    thorns_only: "棘・反撃のダメージだけで倒したため対象外"
     afk_position: "しばらく同じ位置のままです"
     afk_facing: "しばらく同じ向きのままです"
     afk_target: "同じ相手が続いています"
     afk_block: "同じブロックが続いています"
     afk_fishing: "釣りの場所と動きが同じままです"
-file_version: 33
+file_version: 34

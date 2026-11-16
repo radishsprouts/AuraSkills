@@ -683,10 +683,23 @@ public class MobCombatTracker implements Listener {
         if (block.getType() == Material.WATER || block.getType() == Material.BUBBLE_COLUMN) {
             // In water/bubble column and cannot reach player
             if (entity instanceof Mob mob) {
-                return !PaperCombatUtil.canMobReachPlayer(mob, player);
+                return !reachCheck(mob, player, "水流");
             }
         }
         return false;
+    }
+
+    /**
+     * 到達判定を行い、届かないと判定した時は落ちた条件を判定ログと同じ設定（anti_afk.logging_enabled）で1行出す。
+     * 届かない時だけ出るので、正規の攻撃では何も出ない。
+     */
+    private boolean reachCheck(Mob mob, Player player, String label) {
+        PaperCombatUtil.ReachResult result = PaperCombatUtil.evaluateReach(mob, player);
+        if (!result.reachable() && plugin.configBoolean(Option.ANTI_AFK_LOGGING_ENABLED)) {
+            plugin.logger().info("[CombatXp] 到達判定(" + label + ") 届かない: " + mob.getType()
+                    + " 対 " + player.getName() + " 理由=" + result.detail());
+        }
+        return result.reachable();
     }
 
     private boolean canMobFightPlayer(LivingEntity entity, Player player, EntityDamageEvent.DamageCause cause) {
@@ -718,14 +731,14 @@ public class MobCombatTracker implements Listener {
         // Warden special handling: requires either physical path reachability or close-range combat
         if (entity instanceof Warden) {
             if (entity instanceof Mob mob) {
-                return PaperCombatUtil.canMobReachPlayer(mob, player);
+                return reachCheck(mob, player, "ウォーデン");
             }
             return true;
         }
 
         // Standard ground-based melee mobs (Zombie, Iron Golem, Enderman, Piglin, Spider, etc.)
         if (entity instanceof Mob mob) {
-            return PaperCombatUtil.canMobReachPlayer(mob, player);
+            return reachCheck(mob, player, cause.name());
         }
 
         return true;

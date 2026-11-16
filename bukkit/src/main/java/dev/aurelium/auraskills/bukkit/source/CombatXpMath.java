@@ -63,6 +63,14 @@ public final class CombatXpMath {
         return legitTotalAll <= 0.0 && illegal + environment <= 0.0;
     }
 
+    /**
+     * 棘の鎧などの中立のダメージだけで倒され、誰にも経験値が配られない撃破か（理由の通知を出す対象）。
+     * 記録に正規・不正・環境のダメージが無く、最後の死因が棘（THORNS）の時だけ true。
+     */
+    public static boolean isThornsOnlyKill(double legitTotalAll, double illegal, double environment, boolean lastCauseThorns) {
+        return lastCauseThorns && useFallbackKiller(legitTotalAll, illegal, environment);
+    }
+
     /** 記録が古いか（最後の更新から ttl を超えたら true）。 */
     public static boolean isStale(long lastUpdateMillis, long nowMillis, long ttlMillis) {
         return nowMillis - lastUpdateMillis > ttlMillis;
