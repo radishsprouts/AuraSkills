@@ -48,6 +48,11 @@ public class PaperCombatUtil {
             return new ReachResult(!(dy > 2.2) && !(dy < -2.5), "non-paper dy=" + fmt(dy));
         }
 
+        // 0. モブがその場でプレイヤーを殴れる（近接攻撃の範囲内で、視線が通る）なら、地形に関係なく届く
+        if (canMeleeNow(mob, player)) {
+            return new ReachResult(true, "近接攻撃の範囲内");
+        }
+
         Location groundLoc = getGroundLocation(playerLoc);
         if (groundLoc == null) {
             if (isInWater(playerLoc)) {
@@ -84,16 +89,34 @@ public class PaperCombatUtil {
                 if (finalPoint == null) {
                     pathDetail = "finalPoint=null";
                 } else {
-                    double dx = finalPoint.getX() - groundLoc.getX();
-                    double dz = finalPoint.getZ() - groundLoc.getZ();
-                    double horizontalDist = Math.sqrt(dx * dx + dz * dz);
-                    double dy = Math.abs(finalPoint.getY() - groundLoc.getY());
-                    // Final path point must be within 2.5 blocks horizontally and 1.5 blocks vertically of target
-                    if (horizontalDist <= 2.5 && dy <= 1.5) {
+                    // 終点はブロックの位置なので、ブロックの中心で比べる（目標もブロックの中心）
+                    double endX = finalPoint.getBlockX() + 0.5;
+                    double endY = finalPoint.getBlockY();
+                    double endZ = finalPoint.getBlockZ() + 0.5;
+                    double horizontalDist = Math.hypot(endX - groundLoc.getX(), endZ - groundLoc.getZ());
+                    double dy = Math.abs(endY - groundLoc.getY());
+                    String endText = " 終点=" + fmt(endX) + "," + fmt(endY) + "," + fmt(endZ);
+                    if (dy <= ReachMath.PATH_VERTICAL && horizontalDist <= ReachMath.PATH_ARRIVED_HORIZONTAL) {
+                        // プレイヤーのブロックか、その隣まで行ける
                         return new ReachResult(true, "path ok");
                     }
-                    pathDetail = "終点が遠い 水平=" + fmt(horizontalDist) + " 高低差=" + fmt(dy)
-                            + " 終点=" + fmt(finalPoint.getX()) + "," + fmt(finalPoint.getY()) + "," + fmt(finalPoint.getZ());
+                    if (dy <= ReachMath.PATH_VERTICAL && horizontalDist <= ReachMath.PATH_NEAR_HORIZONTAL) {
+                        // 少し手前で止まった。残りが塞がれていない平地なら届く。柵・壁・ガラス板などで
+                        // 仕切られている（モブが柵に押し付けられて止まっている）なら届かない
+                        World w = groundLoc.getWorld();
+                        boolean gapOpen = w != null && ReachMath.isFlatWalkable(
+                                (x, y, z) -> w.getBlockAt(x, y, z).getType().isSolid(),
+                                endX, endY, endZ,
+                                groundLoc.getX(), groundLoc.getY(), groundLoc.getZ(),
+                                (int) Math.ceil(mob.getHeight()));
+                        if (gapOpen) {
+                            return new ReachResult(true, "path ok(終点の先は平地)");
+                        }
+                        pathDetail = "終点の先が塞がれている(柵・壁など) 水平=" + fmt(horizontalDist)
+                                + " 高低差=" + fmt(dy) + endText;
+                    } else {
+                        pathDetail = "終点が遠い 水平=" + fmt(horizontalDist) + " 高低差=" + fmt(dy) + endText;
+                    }
                 }
             }
         } catch (Throwable t) {
@@ -119,6 +142,18 @@ public class PaperCombatUtil {
         double hd = Math.hypot(groundLoc.getX() - mobLoc.getX(), groundLoc.getZ() - mobLoc.getZ());
         return new ReachResult(false, pathDetail + " 接地=" + onGround + " 液体=" + inLiquid
                 + " モブ→目標 水平=" + fmt(hd) + " 高低差=" + fmt(groundLoc.getY() - mobLoc.getY()));
+    }
+
+    /** モブが今この場でプレイヤーを殴れるか（バニラの近接攻撃と同じ範囲と、視線が通ること）。 */
+    private static boolean canMeleeNow(Mob mob, Player player) {
+        if (!mob.getWorld().equals(player.getWorld())) return false;
+        BoundingBox mb = mob.isInsideVehicle() && mob.getVehicle() != null
+                ? mob.getVehicle().getBoundingBox() : mob.getBoundingBox();
+        BoundingBox pb = player.getBoundingBox();
+        boolean inRange = ReachMath.isWithinMeleeRange(
+                new double[]{mb.getMinX(), mb.getMinY(), mb.getMinZ(), mb.getMaxX(), mb.getMaxY(), mb.getMaxZ()},
+                new double[]{pb.getMinX(), pb.getMinY(), pb.getMinZ(), pb.getMaxX(), pb.getMaxY(), pb.getMaxZ()});
+        return inRange && mob.hasLineOfSight(player);
     }
 
     private static String fmt(double v) {
