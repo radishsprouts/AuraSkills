@@ -55,6 +55,9 @@ public class MenuRegistrar {
         buildMenu("abilities", menu -> new AbilitiesMenu(plugin).build(menu));
         buildMenu("presets", menu -> new PresetsMenu(plugin).build(menu));
         buildMenu("stat_info", menu -> new StatInfoMenu(plugin).build(menu));
+        buildMenu("party", menu -> new PartyMenu(plugin).build(menu));
+        buildMenu("party_invite", menu -> new PartyInviteMenu(plugin).build(menu));
+        buildMenu("party_invites", menu -> new PartyInvitesMenu(plugin).build(menu));
 
         for (String nonDefault : ((ApiMenuManager) plugin.getApiBukkit().getMenuManager()).getNonDefaultMenuNames()) {
             buildMenu(nonDefault, menu -> {}); // Empty consumer passed since custom builder is applied in buildMenu

@@ -12,8 +12,11 @@ import dev.aurelium.auraskills.bukkit.user.BukkitUser;
 import dev.aurelium.auraskills.bukkit.util.SoundUtil;
 import dev.aurelium.auraskills.common.config.Option;
 import dev.aurelium.auraskills.common.level.LevelManager;
+import dev.aurelium.auraskills.common.party.PartyImpl;
 import dev.aurelium.auraskills.common.user.User;
+import dev.aurelium.auraskills.paper.util.PaperCombatUtil;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.entity.Entity;
@@ -21,8 +24,14 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityEvent;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 
 public class BukkitLevelManager extends LevelManager {
 
@@ -115,6 +124,113 @@ public class BukkitLevelManager extends LevelManager {
         if (event.isCancelled()) return;
 
         addXpRaw(user, skill, event.getAmount(), source);
+    }
+
+    private boolean isPartyXpShareEligible(Skill skill) {
+        if (!plugin.configBoolean(Option.PARTY_ENABLED) || !plugin.configBoolean(Option.PARTY_XP_SHARE_ENABLED)) {
+            return false;
+        }
+        String skillName = skill.getId().getKey().toLowerCase(Locale.ROOT);
+        for (String excluded : plugin.configStringList(Option.PARTY_XP_SHARE_EXCLUDED_SKILLS)) {
+            if (excluded.equalsIgnoreCase(skillName) || excluded.equalsIgnoreCase(skill.getId().toString())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    protected double getPartySelfBonusMultiplier(User user, Skill skill) {
+        if (!isPartyXpShareEligible(skill)) return 1.0;
+        PartyImpl party = plugin.getPartyManager().getPartyImpl(user.getUuid());
+        if (party == null || party.getSize() <= 1) return 1.0;
+        Player player = ((BukkitUser) user).getPlayer();
+        if (player == null || !player.isOnline()) return 1.0;
+
+        Location origin = player.getLocation();
+        double radius = plugin.configDouble(Option.PARTY_XP_SHARE_RADIUS);
+        double radiusSq = radius * radius;
+        int nearbyCount = 0;
+
+        for (UUID memberId : party.getMembers()) {
+            if (memberId.equals(user.getUuid())) continue;
+            Player member = Bukkit.getPlayer(memberId);
+            if (member == null || !member.isOnline() || member.isDead()) continue;
+            if (PaperCombatUtil.isOwnedByCurrentRegion(member)) {
+                Location memberLoc = member.getLocation();
+                if (Objects.equals(origin.getWorld(), memberLoc.getWorld()) && origin.distanceSquared(memberLoc) <= radiusSq) {
+                    nearbyCount++;
+                }
+            }
+        }
+
+        return CombatXpMath.partySelfBonusMultiplier(
+                nearbyCount,
+                plugin.configDouble(Option.PARTY_XP_SHARE_BONUS_PER_MEMBER),
+                plugin.configDouble(Option.PARTY_XP_SHARE_MAX_BONUS));
+    }
+
+    @Override
+    protected void sharePartyXp(User user, Skill skill, @Nullable XpSource source, double baseAmount) {
+        if (baseAmount <= 0.0 || !isPartyXpShareEligible(skill)) return;
+        PartyImpl party = plugin.getPartyManager().getPartyImpl(user.getUuid());
+        if (party == null || party.getSize() <= 1) return;
+
+        Player earner = ((BukkitUser) user).getPlayer();
+        if (earner == null || !earner.isOnline()) return;
+
+        Location origin = earner.getLocation().clone();
+        double radius = plugin.configDouble(Option.PARTY_XP_SHARE_RADIUS);
+        double radiusSq = radius * radius;
+
+        List<Player> candidates = new ArrayList<>();
+        for (UUID memberId : party.getMembers()) {
+            if (memberId.equals(user.getUuid())) continue;
+            Player member = Bukkit.getPlayer(memberId);
+            if (member == null || !member.isOnline() || member.isDead()) continue;
+            if (PaperCombatUtil.isOwnedByCurrentRegion(member)) {
+                Location memberLoc = member.getLocation();
+                if (!Objects.equals(origin.getWorld(), memberLoc.getWorld()) || origin.distanceSquared(memberLoc) > radiusSq) {
+                    continue;
+                }
+            }
+            candidates.add(member);
+        }
+        if (candidates.isEmpty()) return;
+
+        double perMemberRatio = CombatXpMath.partySharedXpRatioPerMember(
+                candidates.size(),
+                plugin.configDouble(Option.PARTY_XP_SHARE_RATIO),
+                plugin.configDouble(Option.PARTY_XP_SHARE_MAX_TOTAL_RATIO));
+        double sharedAmount = baseAmount * perMemberRatio;
+        if (sharedAmount <= 0.0) return;
+
+        for (Player member : candidates) {
+            if (PaperCombatUtil.isOwnedByCurrentRegion(member)) {
+                grantSharedXp(member, origin, radiusSq, skill, source, sharedAmount);
+            } else {
+                plugin.getScheduler().executeAtEntity(member, task ->
+                        grantSharedXp(member, origin, radiusSq, skill, source, sharedAmount));
+            }
+        }
+    }
+
+    private void grantSharedXp(Player member, Location origin, double radiusSq, Skill skill, @Nullable XpSource source, double sharedAmount) {
+        if (!member.isOnline() || member.isDead()) return;
+        Location memberLoc = member.getLocation();
+        if (!Objects.equals(origin.getWorld(), memberLoc.getWorld()) || origin.distanceSquared(memberLoc) > radiusSq) {
+            return;
+        }
+        if (plugin.getWorldManager().isInDisabledWorld(memberLoc)) return;
+        if (!member.hasPermission("auraskills.skill." + skill.getId().getKey())) return;
+
+        User memberUser = plugin.getUser(member);
+        isSharingPartyXp.set(true);
+        try {
+            addXp(memberUser, skill, source, sharedAmount);
+        } finally {
+            isSharingPartyXp.set(false);
+        }
     }
 
     @Override

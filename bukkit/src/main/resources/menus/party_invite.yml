@@ -1,0 +1,38 @@
+title: 'プレイヤーを招待 ({current_page}/{total_pages})'
+size: 6
+fill:
+  enabled: true
+  material: black_stained_glass_pane
+items:
+  back:
+    pos: 0,0
+    material: arrow
+    display_name: '<green>戻る'
+    lore:
+      - '<gray>パーティー画面に戻ります'
+  close:
+    pos: 0,8
+    material: barrier
+    display_name: '<red>閉じる'
+  no_candidates:
+    pos: 2,4
+    material: barrier
+    display_name: '<gray>招待できるプレイヤーがいません'
+    lore:
+      - '<gray>未所属かつ招待受付中のオンラインプレイヤーが'
+      - '<gray>見つかりませんでした。'
+  previous_page:
+    pos: 5,3
+    material: arrow
+    display_name: '<gold>前のページ'
+    lore:
+      - '<yellow>クリックして前のページへ'
+  next_page:
+    pos: 5,5
+    material: arrow
+    display_name: '<gold>次のページ'
+    lore:
+      - '<yellow>クリックして次のページへ'
+templates:
+  candidate:
+    material: player_head

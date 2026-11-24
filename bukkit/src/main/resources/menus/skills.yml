@@ -25,6 +25,15 @@ items:
     pos: 4,8
     material: barrier
     display_name: '<red>{{close}}'
+  party:
+    pos: 0,2
+    material: campfire
+    display_name: '<green><bold>パーティー'
+    lore:
+      - '<gray>仲間とパーティーを組んで、スキル経験値の'
+      - '<gray>共有や誤爆防止機能を利用できます。'
+      - ' '
+      - '<yellow>▶ クリックして開く'
   stats:
     pos: 0,8
     material: player_head

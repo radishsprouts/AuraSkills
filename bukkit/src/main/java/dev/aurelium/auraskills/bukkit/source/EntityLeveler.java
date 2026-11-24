@@ -14,6 +14,7 @@ import dev.aurelium.auraskills.bukkit.level.BukkitLevelManager;
 import dev.aurelium.auraskills.bukkit.skills.fighting.FightingAbilities;
 import dev.aurelium.auraskills.bukkit.util.AttributeCompat;
 import dev.aurelium.auraskills.common.config.Option;
+import dev.aurelium.auraskills.common.party.PartyImpl;
 import dev.aurelium.auraskills.common.source.SourceTypes;
 import dev.aurelium.auraskills.common.user.User;
 import dev.aurelium.auraskills.paper.util.PaperCombatUtil;
@@ -158,8 +159,9 @@ public class EntityLeveler extends SourceLeveler {
                 levelManager, protectionEnabled, fallbackKiller, factor, totalLegitDamage, preventVanilla,
                 totalDroppedExp, stationaryId, weights);
 
-        // 配る対象: 正規ダメージのある人と、不正なダメージだけを与えた参加者（理由の通知用）
+        // 配る対象: 正規ダメージのある人、その人のパーティーメンバー、不正なダメージだけを与えた参加者（理由の通知用）
         Set<UUID> candidates = new LinkedHashSet<>(legitDamages.keySet());
+        Map<UUID, Double> partyComputedShares = computePartyShares(legitDamages, totalLegitDamage, deathLoc, candidates);
         if (protectionEnabled && record != null) {
             candidates.addAll(record.getParticipants());
         }
@@ -178,9 +180,10 @@ public class EntityLeveler extends SourceLeveler {
             if (local && !isInRange(p, deathLoc)) continue;
 
             double legit = legitDamages.getOrDefault(id, 0.0);
-            if (legit > 0.0) legitRecipient = true;
+            double share = partyComputedShares.getOrDefault(id, CombatXpMath.shareRatio(legit, totalLegitDamage));
+            if (share > 0.0) legitRecipient = true;
 
-            Award award = buildAward(entity, record, id, legit, defaultDamageCause);
+            Award award = buildAward(entity, record, id, legit, share, defaultDamageCause);
             if (local) {
                 giveAward(p, award, ctx, false);
             } else {
@@ -206,9 +209,77 @@ public class EntityLeveler extends SourceLeveler {
                 && deathLoc.distanceSquared(loc) <= 64.0 * 64.0;
     }
 
+    private Map<UUID, Double> computePartyShares(
+            Map<UUID, Double> legitDamages,
+            double totalLegitDamage,
+            Location deathLoc,
+            Set<UUID> candidates
+    ) {
+        if (totalLegitDamage <= 0.0
+                || !plugin.configBoolean(Option.PARTY_ENABLED)
+                || !plugin.configBoolean(Option.PARTY_XP_SHARE_ENABLED)) {
+            return Collections.emptyMap();
+        }
+
+        Map<UUID, PartyImpl> activeParties = new LinkedHashMap<>();
+        Map<UUID, Double> partyDamageSums = new LinkedHashMap<>();
+
+        for (Map.Entry<UUID, Double> entry : legitDamages.entrySet()) {
+            UUID id = entry.getKey();
+            double dmg = entry.getValue();
+            if (dmg <= 0.0) continue;
+
+            PartyImpl party = plugin.getPartyManager().getPartyImpl(id);
+            if (party == null || party.getSize() <= 1) continue;
+
+            activeParties.putIfAbsent(party.getId(), party);
+            partyDamageSums.merge(party.getId(), dmg, Double::sum);
+        }
+
+        if (activeParties.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        double bonusPerMember = plugin.configDouble(Option.PARTY_XP_SHARE_COMBAT_BONUS_PER_MEMBER);
+        double maxBonus = plugin.configDouble(Option.PARTY_XP_SHARE_COMBAT_MAX_BONUS);
+        double equalWeight = plugin.configDouble(Option.PARTY_XP_SHARE_COMBAT_EQUAL_WEIGHT);
+
+        Map<UUID, Double> result = new LinkedHashMap<>();
+        for (Map.Entry<UUID, PartyImpl> entry : activeParties.entrySet()) {
+            PartyImpl party = entry.getValue();
+            double partyDmg = partyDamageSums.getOrDefault(party.getId(), 0.0);
+            if (partyDmg <= 0.0) continue;
+
+            List<UUID> eligibleMembers = new ArrayList<>();
+            for (UUID memberId : party.getMembers()) {
+                Player member = Bukkit.getPlayer(memberId);
+                if (member == null || !member.isOnline() || member.isDead()) continue;
+                if (PaperCombatUtil.isOwnedByCurrentRegion(member) && !isInRange(member, deathLoc)) {
+                    continue;
+                }
+                eligibleMembers.add(memberId);
+                candidates.add(memberId);
+            }
+
+            if (eligibleMembers.size() <= 1) continue;
+
+            double partyBaseShare = CombatXpMath.shareRatio(partyDmg, totalLegitDamage);
+            double partyBonus = CombatXpMath.combatPartyBonusMultiplier(eligibleMembers.size(), bonusPerMember, maxBonus);
+            double boostedPartyShare = partyBaseShare * partyBonus;
+
+            for (UUID memberId : eligibleMembers) {
+                double memberDmg = legitDamages.getOrDefault(memberId, 0.0);
+                double memberShare = CombatXpMath.combatPartyMemberShare(
+                        boostedPartyShare, eligibleMembers.size(), memberDmg, partyDmg, equalWeight);
+                result.put(memberId, memberShare);
+            }
+        }
+        return result;
+    }
+
     /** 撃破側のスレッドで、そのプレイヤーに配るスキル経験値の元になる情報を決める（モブに触れる処理はここで済ませる）。 */
     private Award buildAward(LivingEntity entity, MobCombatTracker.CombatRecord record, UUID id, double legit,
-                             DamageCause defaultDamageCause) {
+                             double share, DamageCause defaultDamageCause) {
         EntityXpSource.EntityDamagers damagerType = record != null
                 ? record.getPlayerDamagerType(id)
                 : EntityXpSource.EntityDamagers.PLAYER;
@@ -228,7 +299,7 @@ public class EntityLeveler extends SourceLeveler {
             baseAmount = getSpawnerMultiplier(entity, skillSource.skill()) * getLevelledMobsMultiplier(entity)
                     * skillSource.source().getXp();
         }
-        return new Award(id, legit, skillSource, baseAmount);
+        return new Award(id, legit, share, skillSource, baseAmount);
     }
 
     /**
@@ -242,13 +313,13 @@ public class EntityLeveler extends SourceLeveler {
         if (checkRange && !isInRange(p, c.deathLoc())) return;
 
         boolean stationary = a.id().equals(c.stationaryId());
-        // その人のスキル経験値の割合 = 正規ダメージ ÷（全員の正規合計 + 不正 + 環境）= 山分け × 減額後の割合
-        double share = CombatXpMath.shareRatio(a.legitDamage(), c.totalLegit());
+        // その人のスキル経験値の割合 = 個人またはパーティー配分 × 減額後の割合
+        double share = a.share();
         // 連続撃破は撃破者本人だけを0にする
         double ratio = stationary ? 0.0 : share * c.factor();
 
         // 1. バニラ経験値（prevent_vanilla_xp が true の時は同じ割合）
-        if (a.legitDamage() > 0.0 && c.totalDroppedExp() > 0) {
+        if (share > 0.0 && c.totalDroppedExp() > 0) {
             double vanillaRatio = c.preventVanilla() ? ratio : share;
             if (vanillaRatio > 0.0) {
                 int playerXp = Math.max(1, (int) Math.round(c.totalDroppedExp() * vanillaRatio));
@@ -282,7 +353,7 @@ public class EntityLeveler extends SourceLeveler {
         if (stationary) {
             reason = XpReductionReason.STATIONARY;
             percent = 0;
-        } else if (a.legitDamage() > 0.0) {
+        } else if (a.share() > 0.0) {
             percent = CombatXpMath.displayPercent(c.factor());
             if (percent < 0 || percent >= 100) return;
             reason = CombatXpMath.pickReason(c.weights(), XpReductionReason::isZero);
@@ -303,7 +374,7 @@ public class EntityLeveler extends SourceLeveler {
     }
 
     /** 1人分の配分の元情報（撃破側のスレッドで作る）。 */
-    private record Award(UUID id, double legitDamage, @Nullable SkillSource<EntityXpSource> skillSource, double baseAmount) {
+    private record Award(UUID id, double legitDamage, double share, @Nullable SkillSource<EntityXpSource> skillSource, double baseAmount) {
     }
 
     /** 1回の撃破で共通の情報。 */

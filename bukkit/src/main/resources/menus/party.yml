@@ -1,0 +1,85 @@
+title: '{party_title}'
+size: 5
+fill:
+  enabled: true
+  material: black_stained_glass_pane
+items:
+  back:
+    pos: 0,0
+    material: arrow
+    display_name: '<green>戻る'
+    lore:
+      - '<gray>前の画面に戻ります'
+  party_info:
+    pos: 0,4
+    material: nether_star
+    display_name: '<aqua>パーティー情報'
+  close:
+    pos: 0,8
+    material: barrier
+    display_name: '<red>閉じる'
+  create_party:
+    pos: 2,2
+    material: emerald
+    display_name: '<green><bold>パーティーを作成'
+    lore:
+      - '<gray>新しいパーティーを作成し、'
+      - '<gray>仲間を招待できるようになります。'
+      - ' '
+      - '<yellow>▶ クリックして作成'
+  pending_invites:
+    pos: 2,4
+    material: writable_book
+    display_name: '<green><bold>届いている招待'
+  toggle_block_guest:
+    pos: 2,6
+    material: bell
+    display_name: '<yellow><bold>招待ブロック'
+  invite_player:
+    pos: 4,0
+    material: emerald
+    display_name: '<green><bold>プレイヤーを招待'
+    lore:
+      - '<gray>オンラインのプレイヤーを選んで'
+      - '<gray>パーティーに招待します。'
+      - ' '
+      - '<yellow>▶ クリックして招待画面へ'
+  toggle_ff:
+    pos: 4,1
+    material: shield
+    display_name: '<yellow><bold>誤爆防止 (FF無効)'
+  toggle_member_invite:
+    pos: 4,2
+    material: gray_dye
+    display_name: '<yellow><bold>メンバーの招待許可'
+  previous_page:
+    pos: 4,3
+    material: arrow
+    display_name: '<gold>前のページ'
+    lore:
+      - '<yellow>クリックして前のページへ'
+  toggle_block:
+    pos: 4,4
+    material: bell
+    display_name: '<yellow><bold>招待ブロック'
+  next_page:
+    pos: 4,5
+    material: arrow
+    display_name: '<gold>次のページ'
+    lore:
+      - '<yellow>クリックして次のページへ'
+  leave_party:
+    pos: 4,7
+    material: oak_door
+    display_name: '<yellow><bold>パーティーから脱退'
+    lore:
+      - '<gray>現在のパーティーから抜けます。'
+      - ' '
+      - '<yellow>▶ クリックして脱退'
+  disband_party:
+    pos: 4,8
+    material: tnt
+    display_name: '<red><bold>パーティーを解散'
+templates:
+  member:
+    material: player_head

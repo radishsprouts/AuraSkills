@@ -146,4 +146,32 @@ class CombatXpMathTest {
         assertEquals(3, PaperCombatUtil.maxCeilingOffset(3.1));
         assertEquals(1, PaperCombatUtil.maxCeilingOffset(2.0));
     }
+
+    @Test
+    void partySelfBonusAndInflationCapWorkCorrectly() {
+        assertEquals(1.0, CombatXpMath.partySelfBonusMultiplier(0, 0.05, 0.15), 1e-9);
+        assertEquals(1.10, CombatXpMath.partySelfBonusMultiplier(2, 0.05, 0.15), 1e-9);
+        assertEquals(1.15, CombatXpMath.partySelfBonusMultiplier(5, 0.05, 0.15), 1e-9);
+
+        // 2人の周囲メンバー -> 1人あたり 0.35 (合計 0.70 <= 1.05)
+        assertEquals(0.35, CombatXpMath.partySharedXpRatioPerMember(2, 0.35, 1.05), 1e-9);
+        // 5人の周囲メンバー -> 上限 1.05 / 5 = 0.21
+        assertEquals(0.21, CombatXpMath.partySharedXpRatioPerMember(5, 0.35, 1.05), 1e-9);
+    }
+
+    @Test
+    void combatPartyBonusAndEqualDamageSplitWorkCorrectly() {
+        assertEquals(1.0, CombatXpMath.combatPartyBonusMultiplier(1, 0.10, 0.30), 1e-9);
+        assertEquals(1.20, CombatXpMath.combatPartyBonusMultiplier(3, 0.10, 0.30), 1e-9);
+        assertEquals(1.30, CombatXpMath.combatPartyBonusMultiplier(6, 0.10, 0.30), 1e-9);
+
+        // 2人パーティーで Aが100dmg, Bが0dmg, partyTotalShare=1.10, equalWeight=0.50
+        // A: 1.10 * (0.25 + 0.50 * 1.0) = 0.825
+        // B: 1.10 * (0.25 + 0.50 * 0.0) = 0.275
+        double shareA = CombatXpMath.combatPartyMemberShare(1.10, 2, 100.0, 100.0, 0.50);
+        double shareB = CombatXpMath.combatPartyMemberShare(1.10, 2, 0.0, 100.0, 0.50);
+        assertEquals(0.825, shareA, 1e-9);
+        assertEquals(0.275, shareB, 1e-9);
+        assertEquals(1.10, shareA + shareB, 1e-9);
+    }
 }

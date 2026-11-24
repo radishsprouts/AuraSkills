@@ -4,6 +4,7 @@ import dev.aurelium.auraskills.api.mana.ManaAbilities;
 import dev.aurelium.auraskills.api.util.NumberUtil;
 import dev.aurelium.auraskills.bukkit.AuraSkills;
 import dev.aurelium.auraskills.bukkit.mana.ManaAbilityProvider;
+import dev.aurelium.auraskills.bukkit.party.PartyFriendlyFireListener;
 import dev.aurelium.auraskills.common.mana.ManaAbilityData;
 import dev.aurelium.auraskills.common.message.type.ManaAbilityMessage;
 import dev.aurelium.auraskills.common.user.User;
@@ -104,6 +105,7 @@ public class SharpHook extends ManaAbilityProvider {
     }
 
     private void activateSharpHook(Player player, User user, LivingEntity caught) {
+        if (PartyFriendlyFireListener.shouldProtectTarget(plugin, player, caught)) return;
         if (insufficientMana(user, getManaCost(user))) return;
 
         double damage = manaAbility.getValue(user.getManaAbilityLevel(manaAbility));

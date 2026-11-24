@@ -287,6 +287,7 @@ public class CommandRegistrar {
             manager.registerCommand(new TraitCommand(plugin));
             manager.registerCommand(new JobsCommand(plugin));
             manager.registerCommand(new AntiAfkCommand(plugin));
+            manager.registerCommand(new PartyCommand(plugin));
         }
     }
 

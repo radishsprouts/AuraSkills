@@ -45,6 +45,7 @@ public class SkillsMenu {
         skillItem.buildComponents(menu);
 
         menu.item("your_skills", item -> item.replace("player", p -> p.player().getName()));
+        menu.item("party", item -> item.onClick(c -> plugin.getSlate().openMenu(c.player(), "party", Map.of("previous_menu", "skills"))));
         menu.item("stats", item -> {
             item.onClick(c -> plugin.getSlate().openMenu(c.player(), "stats", Map.of("previous_menu", "skills")));
             item.modify(i -> {

@@ -46,11 +46,13 @@ public class PlayerJoinQuit implements Listener {
             }
         }
         sendUpdateMessage(player);
+        plugin.getPartyManager().onPlayerJoin(player.getUniqueId());
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
+        plugin.getPartyManager().onPlayerQuit(player.getUniqueId());
         // Don't save users with no profile to avoid data loss
         if (!plugin.getUserManager().hasUser(player.getUniqueId())) {
             return;

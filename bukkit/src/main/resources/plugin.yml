@@ -48,6 +48,7 @@ permissions:
       auraskills.command.lang: true
       auraskills.command.abtoggle: true
       auraskills.command.claimitems: true
+      auraskills.command.party: true
     default: true
 
   auraskills.skill.*:

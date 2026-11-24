@@ -1,0 +1,25 @@
+title: '届いているパーティー招待'
+size: 4
+fill:
+  enabled: true
+  material: black_stained_glass_pane
+items:
+  back:
+    pos: 0,0
+    material: arrow
+    display_name: '<green>戻る'
+    lore:
+      - '<gray>パーティー画面に戻ります'
+  close:
+    pos: 0,8
+    material: barrier
+    display_name: '<red>閉じる'
+  no_invites:
+    pos: 1,4
+    material: paper
+    display_name: '<gray>届いている招待はありません'
+    lore:
+      - '<gray>他のプレイヤーから招待されるとここに表示されます。'
+templates:
+  invite:
+    material: player_head

@@ -8,6 +8,7 @@ import dev.aurelium.auraskills.api.event.loot.LootDropEvent.Cause;
 import dev.aurelium.auraskills.api.trait.Traits;
 import dev.aurelium.auraskills.bukkit.AuraSkills;
 import dev.aurelium.auraskills.bukkit.ability.BukkitAbilityImpl;
+import dev.aurelium.auraskills.bukkit.party.PartyFriendlyFireListener;
 import dev.aurelium.auraskills.bukkit.trait.GatheringLuckTraits;
 import dev.aurelium.auraskills.common.user.User;
 import org.bukkit.Bukkit;
@@ -159,7 +160,8 @@ public class FishingAbilities extends BukkitAbilityImpl {
             Player player = event.getPlayer();
             var barbedAbility = Abilities.BARBED_HOOK;
             if (!isDisabled(barbedAbility) && !failsChecks(player, barbedAbility)) {
-                if (event.getCaught() instanceof LivingEntity living && !(living instanceof Player)) {
+                if (event.getCaught() instanceof LivingEntity living && !(living instanceof Player)
+                        && !PartyFriendlyFireListener.shouldProtectTarget(plugin, player, living)) {
                     User user = plugin.getUser(player);
                     double damage = getValue(barbedAbility, user);
                     living.damage(damage, player);

@@ -27,6 +27,9 @@ import dev.aurelium.auraskills.bukkit.level.BukkitLevelManager;
 import dev.aurelium.auraskills.bukkit.listeners.BlockInteractions;
 import dev.aurelium.auraskills.bukkit.listeners.CriticalHandler;
 import dev.aurelium.auraskills.bukkit.listeners.DamageListener;
+import dev.aurelium.auraskills.bukkit.party.BukkitPartyNotifier;
+import dev.aurelium.auraskills.bukkit.party.PartyFriendlyFireListener;
+import dev.aurelium.auraskills.common.party.PartyManagerImpl;
 import dev.aurelium.auraskills.bukkit.listeners.PlayerDeath;
 import dev.aurelium.auraskills.bukkit.listeners.PlayerJoinQuit;
 import dev.aurelium.auraskills.bukkit.logging.BukkitLogger;
@@ -171,6 +174,7 @@ public class AuraSkills extends JavaPlugin implements AuraSkillsPlugin {
     private PresetManager presetManager;
     private PlatformUtil platformUtil;
     private BukkitAntiAfkManager antiAfkManager;
+    private PartyManagerImpl partyManager;
     private boolean nbtApiEnabled;
     // For unit tests
     private final boolean isMock;
@@ -264,6 +268,9 @@ public class AuraSkills extends JavaPlugin implements AuraSkillsPlugin {
         levelManager = new BukkitLevelManager(this);
         antiAfkManager = new BukkitAntiAfkManager(this); // Requires config loaded
         antiAfkManager.registerChecks();
+        partyManager = new PartyManagerImpl(this);
+        partyManager.setNotifier(new BukkitPartyNotifier(this));
+        partyManager.start();
         registerPriorityEvents();
         // Enabled bStats
         @Nullable Metrics metrics;
@@ -354,6 +361,9 @@ public class AuraSkills extends JavaPlugin implements AuraSkillsPlugin {
         }
         if (itemRegistry != null) {
             itemRegistry.getStorage().save();
+        }
+        if (partyManager != null) {
+            partyManager.stop();
         }
     }
 
@@ -450,6 +460,7 @@ public class AuraSkills extends JavaPlugin implements AuraSkillsPlugin {
     private void registerEvents() {
         PluginManager pm = getServer().getPluginManager();
         pm.registerEvents(new DamageListener(this), this);
+        pm.registerEvents(new PartyFriendlyFireListener(this), this);
         pm.registerEvents(new CriticalHandler(this), this);
         pm.registerEvents(new BlockInteractions(this), this);
         pm.registerEvents(new BlockLootHandler(this), this);
@@ -718,6 +729,11 @@ public class AuraSkills extends JavaPlugin implements AuraSkillsPlugin {
     @Override
     public BukkitAntiAfkManager getAntiAfkManager() {
         return antiAfkManager;
+    }
+
+    @Override
+    public PartyManagerImpl getPartyManager() {
+        return partyManager;
     }
 
     @Override

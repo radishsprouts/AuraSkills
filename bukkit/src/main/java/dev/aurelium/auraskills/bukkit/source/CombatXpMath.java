@@ -105,4 +105,54 @@ public final class CombatXpMath {
         }
         return best;
     }
+
+    /**
+     * 一般スキルのパーティー本人ボーナス倍率を計算する。
+     * 例: nearbyOtherCount=2, bonusPerMember=0.05, maxBonus=0.15 -> 1.10
+     */
+    public static double partySelfBonusMultiplier(int nearbyOtherCount, double bonusPerMember, double maxBonus) {
+        if (nearbyOtherCount <= 0 || bonusPerMember <= 0.0 || maxBonus <= 0.0) return 1.0;
+        double bonus = Math.min(maxBonus, bonusPerMember * nearbyOtherCount);
+        return 1.0 + Math.max(0.0, bonus);
+    }
+
+    /**
+     * 一般スキルの周囲メンバー1人あたりへのXP共有率を計算する（大人数インフレ防止キャップ付き）。
+     * 例: nearbyOtherCount=5, shareRatio=0.35, maxTotalShareRatio=1.05 -> 1.05 / 5 = 0.21
+     */
+    public static double partySharedXpRatioPerMember(int nearbyOtherCount, double shareRatio, double maxTotalShareRatio) {
+        if (nearbyOtherCount <= 0 || shareRatio <= 0.0) return 0.0;
+        if (maxTotalShareRatio <= 0.0) return shareRatio;
+        return Math.min(shareRatio, maxTotalShareRatio / nearbyOtherCount);
+    }
+
+    /**
+     * 戦闘共闘時のパーティー全体ボーナス倍率を計算する。
+     * nearbyPartyMembers が 2人以上なら、1人追加ごとに bonusPerMember 加算（上限 maxBonus）。
+     */
+    public static double combatPartyBonusMultiplier(int nearbyPartyMembers, double bonusPerMember, double maxBonus) {
+        if (nearbyPartyMembers <= 1 || bonusPerMember <= 0.0 || maxBonus <= 0.0) return 1.0;
+        double bonus = Math.min(maxBonus, bonusPerMember * (nearbyPartyMembers - 1));
+        return 1.0 + Math.max(0.0, bonus);
+    }
+
+    /**
+     * 戦闘共闘時のパーティー内メンバー1人の配分割合を計算する。
+     * partyTotalShare * ((equalWeight / partyMemberCount) + ((1 - equalWeight) * (memberDamage / partyTotalDamage)))
+     */
+    public static double combatPartyMemberShare(
+            double partyTotalShare,
+            int partyMemberCount,
+            double memberDamage,
+            double partyTotalDamage,
+            double equalWeight
+    ) {
+        if (partyTotalShare <= 0.0 || partyMemberCount <= 0) return 0.0;
+        double clampedEqual = Math.max(0.0, Math.min(1.0, equalWeight));
+        double equalPart = clampedEqual / partyMemberCount;
+        double damagePart = partyTotalDamage > 0.0
+                ? (1.0 - clampedEqual) * (Math.max(0.0, memberDamage) / partyTotalDamage)
+                : (1.0 - clampedEqual) / partyMemberCount;
+        return partyTotalShare * (equalPart + damagePart);
+    }
 }

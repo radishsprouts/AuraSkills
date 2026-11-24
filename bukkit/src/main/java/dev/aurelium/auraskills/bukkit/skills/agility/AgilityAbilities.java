@@ -9,6 +9,7 @@ import dev.aurelium.auraskills.api.trait.Traits;
 import dev.aurelium.auraskills.api.util.AuraSkillsModifier.Operation;
 import dev.aurelium.auraskills.bukkit.AuraSkills;
 import dev.aurelium.auraskills.bukkit.ability.BukkitAbilityImpl;
+import dev.aurelium.auraskills.bukkit.party.PartyFriendlyFireListener;
 import dev.aurelium.auraskills.bukkit.item.BukkitPotionType;
 import dev.aurelium.auraskills.bukkit.item.TraitModifiers;
 import dev.aurelium.auraskills.bukkit.util.AttributeCompat;
@@ -328,6 +329,7 @@ public class AgilityAbilities extends BukkitAbilityImpl {
             // Get entities nearby
             for (Entity entity : player.getWorld().getNearbyEntities(player.getLocation(), 3, 3, 1)) {
                 if (!(entity instanceof LivingEntity livingEntity) || entity.equals(player)) continue;
+                if (PartyFriendlyFireListener.shouldProtectTarget(plugin, player, livingEntity)) continue;
 
                 // Damage the entity
                 livingEntity.damage(thunderFallDamage, player);
