@@ -21,6 +21,7 @@ import dev.aurelium.auraskills.common.message.MessageKey;
 import dev.aurelium.auraskills.common.message.MessageProvider;
 import dev.aurelium.auraskills.common.message.PlatformLogger;
 import dev.aurelium.auraskills.common.modifier.ModifierManager;
+import dev.aurelium.auraskills.common.party.PartyManagerImpl;
 import dev.aurelium.auraskills.common.ref.PlayerRef;
 import dev.aurelium.auraskills.common.region.WorldManager;
 import dev.aurelium.auraskills.common.reward.RewardManager;
@@ -113,6 +114,8 @@ public interface AuraSkillsPlugin {
     ModifierManager getModifierManager();
 
     AntiAfkManager getAntiAfkManager();
+
+    PartyManagerImpl getPartyManager();
 
     /**
      * Get a user instance from a player reference instance

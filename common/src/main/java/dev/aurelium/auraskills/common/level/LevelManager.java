@@ -25,6 +25,7 @@ public abstract class LevelManager {
 
     private final AuraSkillsPlugin plugin;
     protected final XpRequirements xpRequirements;
+    protected final ThreadLocal<Boolean> isSharingPartyXp = ThreadLocal.withInitial(() -> false);
 
     public LevelManager(AuraSkillsPlugin plugin) {
         this.plugin = plugin;
@@ -57,13 +58,27 @@ public abstract class LevelManager {
     public void addXp(User user, Skill skill, @Nullable XpSource source, double amount) {
         if (amount == 0) return; // Ignore if source amount is 0
 
-        double amountToAdd = amount * calculateMultiplier(user, skill);
+        boolean sharing = Boolean.TRUE.equals(isSharingPartyXp.get());
+        double partyBonus = sharing ? 1.0 : getPartySelfBonusMultiplier(user, skill);
+        double amountToAdd = amount * calculateMultiplier(user, skill) * partyBonus;
 
         // Call event
         var res = plugin.getEventHandler().callXpGainEvent(user, skill, source, amountToAdd);
         if (res.first()) return;
 
         addXpRaw(user, skill, res.second(), source);
+
+        if (!sharing) {
+            sharePartyXp(user, skill, source, amount);
+        }
+    }
+
+    protected double getPartySelfBonusMultiplier(User user, Skill skill) {
+        return 1.0;
+    }
+
+    protected void sharePartyXp(User user, Skill skill, @Nullable XpSource source, double baseAmount) {
+        // Overridden on platform implementations
     }
 
     protected void addXpRaw(User user, Skill skill, double amount, @Nullable XpSource xpSource) {

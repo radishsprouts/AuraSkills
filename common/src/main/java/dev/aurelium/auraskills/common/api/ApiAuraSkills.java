@@ -4,6 +4,7 @@ import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.config.MainConfig;
 import dev.aurelium.auraskills.api.loot.LootManager;
 import dev.aurelium.auraskills.api.message.MessageManager;
+import dev.aurelium.auraskills.api.party.PartyManager;
 import dev.aurelium.auraskills.api.registry.GlobalRegistry;
 import dev.aurelium.auraskills.api.registry.Handlers;
 import dev.aurelium.auraskills.api.registry.NamespacedId;
@@ -111,6 +112,11 @@ public class ApiAuraSkills implements AuraSkillsApi {
     @Override
     public LootManager getLootManager() {
         return plugin.getApiProvider().getLootManager();
+    }
+
+    @Override
+    public PartyManager getPartyManager() {
+        return plugin.getPartyManager();
     }
 
     public Map<String, NamespacedRegistry> getNamespacedRegistryMap() {

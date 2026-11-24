@@ -196,7 +196,23 @@ public enum Option {
     AUTOMATIC_BACKUPS_MAX_USERS("automatic_backups.max_users", OptionType.INT),
     AUTOMATIC_BACKUPS_DELETE_OLD_BACKUPS("automatic_backups.delete_old_backups", OptionType.BOOLEAN),
     AUTOMATIC_BACKUPS_DELETE_OLDER_THAN_DAYS("automatic_backups.delete_older_than_days", OptionType.INT),
-    SAVE_BLANK_PROFILES("save_blank_profiles", OptionType.BOOLEAN);
+    SAVE_BLANK_PROFILES("save_blank_profiles", OptionType.BOOLEAN),
+    // Party options
+    PARTY_ENABLED("party.enabled", OptionType.BOOLEAN),
+    PARTY_MAX_SIZE("party.max_size", OptionType.INT),
+    PARTY_INVITE_EXPIRE_SECONDS("party.invite_expire_seconds", OptionType.INT),
+    PARTY_OFFLINE_GRACE_SECONDS("party.offline_grace_seconds", OptionType.INT),
+    PARTY_XP_SHARE_ENABLED("party.xp_share.enabled", OptionType.BOOLEAN),
+    PARTY_XP_SHARE_RADIUS("party.xp_share.radius", OptionType.DOUBLE),
+    PARTY_XP_SHARE_RATIO("party.xp_share.share_ratio", OptionType.DOUBLE),
+    PARTY_XP_SHARE_MAX_TOTAL_RATIO("party.xp_share.max_total_share_ratio", OptionType.DOUBLE),
+    PARTY_XP_SHARE_BONUS_PER_MEMBER("party.xp_share.bonus_per_member", OptionType.DOUBLE),
+    PARTY_XP_SHARE_MAX_BONUS("party.xp_share.max_bonus", OptionType.DOUBLE),
+    PARTY_XP_SHARE_COMBAT_BONUS_PER_MEMBER("party.xp_share.combat_bonus_per_member", OptionType.DOUBLE),
+    PARTY_XP_SHARE_COMBAT_MAX_BONUS("party.xp_share.combat_max_bonus", OptionType.DOUBLE),
+    PARTY_XP_SHARE_COMBAT_EQUAL_WEIGHT("party.xp_share.combat_equal_weight", OptionType.DOUBLE),
+    PARTY_XP_SHARE_EXCLUDED_SKILLS("party.xp_share.excluded_skills", OptionType.LIST),
+    PARTY_FRIENDLY_FIRE_DEFAULT_PREVENT("party.friendly_fire.default_prevent", OptionType.BOOLEAN);
 
     private final String path;
     private final OptionType type;

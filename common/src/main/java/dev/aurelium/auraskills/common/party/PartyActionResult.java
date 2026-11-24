@@ -1,0 +1,19 @@
+package dev.aurelium.auraskills.common.party;
+
+public enum PartyActionResult {
+    SUCCESS,
+    DISABLED,
+    ALREADY_IN_PARTY,
+    NOT_IN_PARTY,
+    NOT_LEADER,
+    NO_INVITE_PERMISSION,
+    CANNOT_TARGET_SELF,
+    TARGET_ALREADY_IN_PARTY,
+    TARGET_NOT_IN_PARTY,
+    TARGET_INVITE_BLOCKED,
+    ALREADY_INVITED,
+    PARTY_FULL,
+    NO_PENDING_INVITE,
+    INVITE_EXPIRED,
+    CANNOT_KICK_LEADER
+}

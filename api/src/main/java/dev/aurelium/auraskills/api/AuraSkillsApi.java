@@ -3,6 +3,7 @@ package dev.aurelium.auraskills.api;
 import dev.aurelium.auraskills.api.config.MainConfig;
 import dev.aurelium.auraskills.api.loot.LootManager;
 import dev.aurelium.auraskills.api.message.MessageManager;
+import dev.aurelium.auraskills.api.party.PartyManager;
 import dev.aurelium.auraskills.api.registry.GlobalRegistry;
 import dev.aurelium.auraskills.api.registry.Handlers;
 import dev.aurelium.auraskills.api.registry.NamespacedRegistry;
@@ -110,6 +111,13 @@ public interface AuraSkillsApi {
      * @return the loot manager
      */
     LootManager getLootManager();
+
+    /**
+     * Gets the party manager for querying AuraSkills party membership.
+     *
+     * @return the party manager
+     */
+    PartyManager getPartyManager();
 
     /**
      * Gets the instance of the {@link AuraSkillsApi},

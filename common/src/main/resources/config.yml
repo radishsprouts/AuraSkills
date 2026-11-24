@@ -331,6 +331,31 @@ automatic_backups:
   delete_old_backups: false
   delete_older_than_days: 7
 save_blank_profiles: false
+party:
+  enabled: true
+  max_size: 0
+  invite_expire_seconds: 60
+  offline_grace_seconds: 300
+  xp_share:
+    enabled: true
+    radius: 48.0
+    share_ratio: 0.35
+    max_total_share_ratio: 1.05
+    bonus_per_member: 0.05
+    max_bonus: 0.15
+    combat_bonus_per_member: 0.10
+    combat_max_bonus: 0.30
+    combat_equal_weight: 0.50
+    excluded_skills:
+      - alchemy
+      - enchanting
+      - agility
+      - endurance
+      - sorcery
+      - healing
+      - forging
+  friendly_fire:
+    default_prevent: true
 experimental:
   optimize_leaderboard_updating: false
 metadata:

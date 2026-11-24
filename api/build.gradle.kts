@@ -45,48 +45,44 @@ java {
     }
 }
 
-if (project.properties.keys.containsAll(setOf("developerId", "developerUsername", "developerEmail", "developerUrl"))) {
-    publishing {
-        repositories {
+publishing {
+    repositories {
+        maven {
+            name = "StagingDeploy"
+            url = uri(layout.buildDirectory.dir("staging-deploy"))
+        }
+        if (project.properties.keys.containsAll(setOf("sonatypeUsername", "sonatypePassword"))
+            && project.version.toString().endsWith("-SNAPSHOT")
+        ) {
             maven {
-                name = "StagingDeploy"
-                url = uri(layout.buildDirectory.dir("staging-deploy"))
-            }
-            if (project.properties.keys.containsAll(
-                    setOf(
-                        "sonatypeUsername",
-                        "sonatypePassword"
-                    )
-                ) && project.version.toString().endsWith("-SNAPSHOT")
-            ) {
-                maven {
-                    name = "Snapshot"
-                    url = uri("https://central.sonatype.com/repository/maven-snapshots/")
+                name = "Snapshot"
+                url = uri("https://central.sonatype.com/repository/maven-snapshots/")
 
-                    credentials {
-                        username = project.property("sonatypeUsername").toString()
-                        password = project.property("sonatypePassword").toString()
-                    }
+                credentials {
+                    username = project.property("sonatypeUsername").toString()
+                    password = project.property("sonatypePassword").toString()
                 }
             }
         }
+    }
 
-        publications.create<MavenPublication>("mavenJava") {
-            groupId = "dev.aurelium"
-            artifactId = "auraskills-api"
-            version = project.version.toString()
+    publications.create<MavenPublication>("mavenJava") {
+        groupId = "dev.aurelium"
+        artifactId = "auraskills-api"
+        version = project.version.toString()
 
-            pom {
-                name.set("AuraSkills API")
-                description.set("API for AuraSkills, the ultra-versatile RPG skills plugin for Minecraft")
-                url.set("https://wiki.aurelium.dev/auraskills")
-                inceptionYear.set("2020")
-                licenses {
-                    license {
-                        name.set("The GNU General Public License, Version 3.0")
-                        url.set("https://www.gnu.org/licenses/gpl-3.0.en.html")
-                    }
+        pom {
+            name.set("AuraSkills API")
+            description.set("API for AuraSkills, the ultra-versatile RPG skills plugin for Minecraft")
+            url.set("https://wiki.aurelium.dev/auraskills")
+            inceptionYear.set("2020")
+            licenses {
+                license {
+                    name.set("The GNU General Public License, Version 3.0")
+                    url.set("https://www.gnu.org/licenses/gpl-3.0.en.html")
                 }
+            }
+            if (project.properties.keys.containsAll(setOf("developerId", "developerUsername", "developerEmail", "developerUrl"))) {
                 developers {
                     developer {
                         id.set(project.property("developerId").toString())
@@ -95,14 +91,14 @@ if (project.properties.keys.containsAll(setOf("developerId", "developerUsername"
                         url.set(project.property("developerUrl").toString())
                     }
                 }
-                scm {
-                    connection.set("scm:git:git://github.com/Archy-X/AuraSkills.git")
-                    developerConnection.set("scm:git:git://github.com/Archy-X/AuraSkills.git")
-                    url.set("https://github.com/Archy-X/AuraSkills/tree/master")
-                }
             }
-
-            from(components["java"])
+            scm {
+                connection.set("scm:git:git://github.com/Archy-X/AuraSkills.git")
+                developerConnection.set("scm:git:git://github.com/Archy-X/AuraSkills.git")
+                url.set("https://github.com/Archy-X/AuraSkills/tree/master")
+            }
         }
+
+        from(components["java"])
     }
 }
