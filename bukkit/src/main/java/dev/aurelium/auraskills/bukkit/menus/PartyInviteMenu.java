@@ -49,29 +49,32 @@ public class PartyInviteMenu {
             return info.item();
         }));
 
-        menu.template("candidate", UUID.class, template -> {
+        menu.template("candidate", Integer.class, template -> {
             template.definedContexts(m -> {
                 List<UUID> candidates = getInvitablePlayers(m.player());
                 int page = m.menu().getCurrentPage();
                 int start = page * PLAYERS_PER_PAGE;
-                int end = Math.min(candidates.size(), start + PLAYERS_PER_PAGE);
-                if (start >= candidates.size()) return Collections.emptySet();
-                return new LinkedHashSet<>(candidates.subList(start, end));
+                int count = Math.min(PLAYERS_PER_PAGE, Math.max(0, candidates.size() - start));
+                Set<Integer> indices = new LinkedHashSet<>();
+                for (int i = 0; i < count; i++) {
+                    indices.add(i);
+                }
+                return indices;
             });
 
             template.slotPos(c -> {
-                List<UUID> candidates = getInvitablePlayers(c.player());
-                int page = c.menu().getCurrentPage();
-                int start = page * PLAYERS_PER_PAGE;
-                int idx = candidates.indexOf(c.value()) - start;
-                if (idx < 0) idx = 0;
+                int idx = c.value();
                 int row = 1 + (idx / 9);
                 int col = idx % 9;
                 return SlotPos.of(row, col);
             });
 
             template.modify(info -> {
-                UUID targetId = info.value();
+                List<UUID> candidates = getInvitablePlayers(info.player());
+                int globalIdx = info.menu().getCurrentPage() * PLAYERS_PER_PAGE + info.value();
+                if (globalIdx < 0 || globalIdx >= candidates.size()) return null;
+
+                UUID targetId = candidates.get(globalIdx);
                 Player target = Bukkit.getPlayer(targetId);
                 if (target == null || !target.isOnline()) return null;
 
@@ -101,7 +104,11 @@ public class PartyInviteMenu {
 
             template.onClick(c -> {
                 Player viewer = c.player();
-                UUID targetId = c.value();
+                List<UUID> candidates = getInvitablePlayers(viewer);
+                int globalIdx = c.menu().getCurrentPage() * PLAYERS_PER_PAGE + c.value();
+                if (globalIdx < 0 || globalIdx >= candidates.size()) return;
+
+                UUID targetId = candidates.get(globalIdx);
                 Player target = Bukkit.getPlayer(targetId);
                 String targetName = target != null ? target.getName() : targetId.toString().substring(0, 8);
 

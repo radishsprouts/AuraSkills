@@ -10,6 +10,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Sound;
@@ -23,6 +24,7 @@ import java.util.UUID;
 public class BukkitPartyNotifier implements PartyNotifier {
 
     private static final MiniMessage MINI = MiniMessage.miniMessage();
+    private static final LegacyComponentSerializer LEGACY = LegacyComponentSerializer.legacySection();
     private final AuraSkills plugin;
 
     public BukkitPartyNotifier(AuraSkills plugin) {
@@ -61,12 +63,22 @@ public class BukkitPartyNotifier implements PartyNotifier {
         return raw;
     }
 
+    private Component buildPrefixedComponent(Locale locale, String miniMessageText) {
+        String prefix = plugin.getPrefix(locale);
+        Component prefixComp = prefix != null && !prefix.isEmpty()
+                ? (prefix.indexOf('§') >= 0 ? LEGACY.deserialize(prefix) : MINI.deserialize(prefix))
+                : Component.empty();
+        Component bodyComp = miniMessageText.indexOf('§') >= 0
+                ? LEGACY.deserialize(miniMessageText)
+                : MINI.deserialize(miniMessageText);
+        return Component.empty().append(prefixComp).append(bodyComp);
+    }
+
     public void sendMessage(Player player, String miniMessageText) {
         plugin.getScheduler().executeAtEntity(player, task -> {
             if (!player.isOnline()) return;
             Locale locale = plugin.getLocale(player);
-            String prefix = plugin.getPrefix(locale);
-            Component component = MINI.deserialize(prefix + miniMessageText);
+            Component component = buildPrefixedComponent(locale, miniMessageText);
             plugin.getAudiences().player(player).sendMessage(component);
         });
     }
@@ -126,7 +138,7 @@ public class BukkitPartyNotifier implements PartyNotifier {
                         .clickEvent(ClickEvent.runCommand("/party deny " + inviterName))
                         .hoverEvent(HoverEvent.showText(MINI.deserialize("<red>/party deny " + inviterName)));
 
-                Component full = MINI.deserialize(prefix + received + " ")
+                Component full = buildPrefixedComponent(loc, received + " ")
                         .append(acceptComp)
                         .append(Component.text(" "))
                         .append(denyComp);

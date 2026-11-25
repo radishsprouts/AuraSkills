@@ -297,36 +297,35 @@ public class PartyMenu {
         });
 
         // メンバー一覧テンプレート (1,0 〜 3,8)
-        menu.template("member", UUID.class, template -> {
+        menu.template("member", Integer.class, template -> {
             template.definedContexts(m -> {
                 PartyImpl party = plugin.getPartyManager().getPartyImpl(m.player().getUniqueId());
                 if (party == null) return Collections.emptySet();
-                List<UUID> sorted = getSortedMembers(party);
                 int page = m.menu().getCurrentPage();
                 int start = page * MEMBERS_PER_PAGE;
-                int end = Math.min(sorted.size(), start + MEMBERS_PER_PAGE);
-                if (start >= sorted.size()) return Collections.emptySet();
-                return new LinkedHashSet<>(sorted.subList(start, end));
+                int count = Math.min(MEMBERS_PER_PAGE, Math.max(0, party.getSize() - start));
+                Set<Integer> indices = new LinkedHashSet<>();
+                for (int i = 0; i < count; i++) {
+                    indices.add(i);
+                }
+                return indices;
             });
 
             template.slotPos(c -> {
-                PartyImpl party = plugin.getPartyManager().getPartyImpl(c.player().getUniqueId());
-                if (party == null) return SlotPos.of(1, 0);
-                List<UUID> sorted = getSortedMembers(party);
-                int page = c.menu().getCurrentPage();
-                int start = page * MEMBERS_PER_PAGE;
-                int idx = sorted.indexOf(c.value()) - start;
-                if (idx < 0) idx = 0;
+                int idx = c.value();
                 int row = 1 + (idx / 9);
                 int col = idx % 9;
                 return SlotPos.of(row, col);
             });
 
             template.modify(info -> {
-                UUID memberId = info.value();
                 Player viewer = info.player();
                 PartyImpl party = plugin.getPartyManager().getPartyImpl(viewer.getUniqueId());
                 if (party == null) return null;
+                List<UUID> sorted = getSortedMembers(party);
+                int globalIdx = info.menu().getCurrentPage() * MEMBERS_PER_PAGE + info.value();
+                if (globalIdx < 0 || globalIdx >= sorted.size()) return null;
+                UUID memberId = sorted.get(globalIdx);
 
                 ItemStack is = info.item();
                 is.setType(Material.PLAYER_HEAD);
@@ -388,9 +387,13 @@ public class PartyMenu {
 
             template.onClick(c -> {
                 Player viewer = c.player();
-                UUID targetId = c.value();
                 PartyImpl party = plugin.getPartyManager().getPartyImpl(viewer.getUniqueId());
-                if (party == null || !party.isLeader(viewer.getUniqueId()) || targetId.equals(viewer.getUniqueId())) {
+                if (party == null) return;
+                List<UUID> sorted = getSortedMembers(party);
+                int globalIdx = c.menu().getCurrentPage() * MEMBERS_PER_PAGE + c.value();
+                if (globalIdx < 0 || globalIdx >= sorted.size()) return;
+                UUID targetId = sorted.get(globalIdx);
+                if (!party.isLeader(viewer.getUniqueId()) || targetId.equals(viewer.getUniqueId())) {
                     return;
                 }
 

@@ -38,19 +38,28 @@ public class PartyInvitesMenu {
             return info.item();
         }));
 
-        menu.template("invite", PartyInvite.class, template -> {
-            template.definedContexts(m -> new LinkedHashSet<>(plugin.getPartyManager().getPendingInvites(m.player().getUniqueId())));
+        menu.template("invite", Integer.class, template -> {
+            template.definedContexts(m -> {
+                List<PartyInvite> invites = plugin.getPartyManager().getPendingInvites(m.player().getUniqueId());
+                int count = Math.min(18, invites.size());
+                Set<Integer> indices = new LinkedHashSet<>();
+                for (int i = 0; i < count; i++) {
+                    indices.add(i);
+                }
+                return indices;
+            });
 
             template.slotPos(c -> {
-                List<PartyInvite> invites = plugin.getPartyManager().getPendingInvites(c.player().getUniqueId());
-                int idx = invites.indexOf(c.value());
-                if (idx < 0) idx = 0;
-                if (idx >= 18) idx = 17;
+                int idx = c.value();
                 return SlotPos.of(1 + (idx / 9), idx % 9);
             });
 
             template.modify(info -> {
-                PartyInvite invite = info.value();
+                List<PartyInvite> invites = plugin.getPartyManager().getPendingInvites(info.player().getUniqueId());
+                int idx = info.value();
+                if (idx < 0 || idx >= invites.size()) return null;
+
+                PartyInvite invite = invites.get(idx);
                 PartyImpl party = plugin.getPartyManager().getPartyById(invite.partyId());
                 if (party == null) return null;
 
@@ -80,7 +89,11 @@ public class PartyInvitesMenu {
 
             template.onClick(c -> {
                 Player viewer = c.player();
-                PartyInvite invite = c.value();
+                List<PartyInvite> invites = plugin.getPartyManager().getPendingInvites(viewer.getUniqueId());
+                int idx = c.value();
+                if (idx < 0 || idx >= invites.size()) return;
+
+                PartyInvite invite = invites.get(idx);
                 BukkitPartyNotifier notifier = new BukkitPartyNotifier(plugin);
 
                 if (c.event().isRightClick()) {
