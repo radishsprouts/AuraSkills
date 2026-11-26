@@ -63,15 +63,16 @@ public class BukkitPartyNotifier implements PartyNotifier {
         return raw;
     }
 
-    private Component buildPrefixedComponent(Locale locale, String miniMessageText) {
+    private Component deserializeText(String text) {
+        if (text == null || text.isEmpty()) return Component.empty();
+        return text.indexOf('§') >= 0 ? LEGACY.deserialize(text) : MINI.deserialize(text);
+    }
+
+    private Component buildPrefixedComponent(Locale locale, String messageText) {
         String prefix = plugin.getPrefix(locale);
-        Component prefixComp = prefix != null && !prefix.isEmpty()
-                ? (prefix.indexOf('§') >= 0 ? LEGACY.deserialize(prefix) : MINI.deserialize(prefix))
-                : Component.empty();
-        Component bodyComp = miniMessageText.indexOf('§') >= 0
-                ? LEGACY.deserialize(miniMessageText)
-                : MINI.deserialize(miniMessageText);
-        return Component.empty().append(prefixComp).append(bodyComp);
+        return Component.empty()
+                .append(deserializeText(prefix))
+                .append(deserializeText(messageText));
     }
 
     public void sendMessage(Player player, String miniMessageText) {
@@ -131,12 +132,12 @@ public class BukkitPartyNotifier implements PartyNotifier {
                 String acceptBtn = msg(loc, "party.invite_accept_button", "<green><bold>[参加する]");
                 String denyBtn = msg(loc, "party.invite_deny_button", "<red><bold>[辞退する]");
 
-                Component acceptComp = MINI.deserialize(acceptBtn)
+                Component acceptComp = deserializeText(acceptBtn)
                         .clickEvent(ClickEvent.runCommand("/party accept " + inviterName))
-                        .hoverEvent(HoverEvent.showText(MINI.deserialize("<green>/party accept " + inviterName)));
-                Component denyComp = MINI.deserialize(denyBtn)
+                        .hoverEvent(HoverEvent.showText(deserializeText("<green>/party accept " + inviterName)));
+                Component denyComp = deserializeText(denyBtn)
                         .clickEvent(ClickEvent.runCommand("/party deny " + inviterName))
-                        .hoverEvent(HoverEvent.showText(MINI.deserialize("<red>/party deny " + inviterName)));
+                        .hoverEvent(HoverEvent.showText(deserializeText("<red>/party deny " + inviterName)));
 
                 Component full = buildPrefixedComponent(loc, received + " ")
                         .append(acceptComp)
